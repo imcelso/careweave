@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CareWeave - Moments that matter</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Arial', 'sans-serif']
+          },
+          colors: {
+            care: {
+              cream: '#f7f4ee',
+              mist: '#eef3f2',
+              sage: '#8fb5a1',
+              sageDark: '#4f7f68',
+              teal: '#6aa6a5',
+              blue: '#7d9dbb',
+              ink: '#263532'
+            }
+          },
+          boxShadow: {
+            soft: '0 18px 45px rgba(48, 70, 67, 0.10)'
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    [v-cloak] { display: none; }
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(143, 181, 161, 0.18), transparent 32rem),
+        linear-gradient(135deg, #f7f4ee 0%, #eef3f2 48%, #f4f7f8 100%);
+    }
+    .soft-scrollbar::-webkit-scrollbar { width: 10px; }
+    .soft-scrollbar::-webkit-scrollbar-track { background: #eef3f2; border-radius: 999px; }
+    .soft-scrollbar::-webkit-scrollbar-thumb { background: #b8c9c2; border-radius: 999px; }
+    .chart-wrap {
+      position: relative;
+      width: 100%;
+      height: 18rem;
+    }
+    .chart-wrap.tall {
+      height: 21rem;
+    }
+    .portrait-img {
+      background: linear-gradient(145deg, #eef3f2, #f7f4ee);
+      object-fit: cover;
+      object-position: 50% 20%;
+    }
+    .float-soft {
+      animation: floatSoft 5.5s ease-in-out infinite;
+    }
+    .pulse-soft {
+      animation: pulseSoft 2.8s ease-in-out infinite;
+    }
+    .blink-soft {
+      animation: blinkSoft 1.6s ease-in-out infinite;
+    }
+    .ai-sheen {
+      position: relative;
+      overflow: hidden;
+    }
+    .ai-sheen::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,.42) 42%, transparent 68%);
+      transform: translateX(-130%);
+      animation: aiSheen 4.8s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes floatSoft {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    @keyframes pulseSoft {
+      0%, 100% { opacity: 0.64; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.04); }
+    }
+    @keyframes blinkSoft {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.15; }
+    }
+    @keyframes aiSheen {
+      0%, 48% { transform: translateX(-130%); }
+      72%, 100% { transform: translateX(130%); }
+    }
+    @media (min-width: 768px) {
+      .chart-wrap { height: 20rem; }
+      .chart-wrap.tall { height: 23rem; }
+    }
+  </style>
+</head>
+<body class="min-h-screen text-care-ink antialiased">
+  <div id="app" v-cloak class="min-h-screen">
+    <header class="border-b border-white/70 bg-white/70 backdrop-blur">
+      <div class="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
+        <div class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+          <div class="flex items-center gap-3">
+            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-care-sageDark text-white shadow-soft">
+              <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 20s-7-4.35-7-10.15A4.32 4.32 0 0 1 9.36 5.5c1.2 0 2.22.57 2.64 1.28.42-.71 1.44-1.28 2.64-1.28A4.32 4.32 0 0 1 19 9.85C19 15.65 12 20 12 20Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div>
+              <h1 class="text-2xl font-semibold tracking-normal text-care-ink">CareWeave</h1>
+              <p class="text-sm text-slate-600">Moments that matter</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="rounded-full bg-care-mist px-4 py-2 text-sm text-slate-700">
+              Current staff member <span class="font-semibold text-care-sageDark">Ana</span>
+            </div>
+            <div class="rounded-full bg-white px-4 py-2 text-sm text-slate-600 shadow-sm">
+              Shift partner: Lars
+            </div>
+          </div>
+        </div>
+        <nav class="grid grid-cols-3 rounded-2xl bg-care-mist p-1 shadow-inner md:w-[28rem]" aria-label="Primary">
+          <button
+            v-for="tab in tabs"
+            :key="tab"
+            type="button"
+            class="rounded-xl px-4 py-3 text-sm font-semibold transition"
+            :class="activeTab === tab ? 'bg-white text-care-sageDark shadow-sm' : 'text-slate-600 hover:text-care-ink'"
+            @click="setTab(tab)"
+          >
+            {{ tab }}
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <section v-if="activeTab === 'Record'" class="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]">
+        <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-7">
+          <div class="mb-6 flex flex-col gap-2">
+            <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Quick Capture</p>
+            <h2 class="text-2xl font-semibold text-care-ink">Record a moment</h2>
+            <p class="max-w-2xl text-base leading-7 text-slate-600">
+              A short note from morning tea, garden time, a reminiscence group, or handover can be enough.
+            </p>
+          </div>
+
+          <form class="space-y-6" @submit.prevent="saveMoment">
+            <div>
+              <label for="resident" class="mb-2 block text-sm font-semibold text-slate-700">Resident</label>
+              <select
+                id="resident"
+                v-model="form.resident"
+                class="w-full rounded-2xl border border-slate-200 bg-care-cream px-4 py-3 text-base text-care-ink outline-none transition focus:border-care-teal focus:ring-4 focus:ring-care-teal/15"
+              >
+                <option value="">Select a resident</option>
+                <option v-for="resident in residents" :key="resident" :value="resident">{{ resident }}</option>
+              </select>
+            </div>
+
+            <div>
+              <fieldset>
+                <legend class="mb-3 block text-sm font-semibold text-slate-700">Emotion tag</legend>
+                <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  <button
+                    v-for="emotion in emotions"
+                    :key="emotion"
+                    type="button"
+                    class="min-h-[3.25rem] rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition"
+                    :class="[form.emotion === emotion ? emotionStyles[emotion].selected : emotionStyles[emotion].idle, suggestedEmotion === emotion && form.emotion !== emotion ? 'ring-4 ring-emerald-200 shadow-[0_0_0_4px_rgba(143,181,161,0.22)]' : '']"
+                    @click="selectEmotion(emotion)"
+                  >
+                    <span class="mr-1.5" aria-hidden="true">{{ emotionEmoji[emotion] }}</span>{{ emotion }}
+                    <span v-if="suggestedEmotion === emotion && form.emotion !== emotion" class="mt-1 block text-xs font-semibold text-care-sageDark">✨ Suggested</span>
+                  </button>
+                </div>
+              </fieldset>
+            </div>
+
+            <div>
+              <label for="note" class="mb-2 block text-sm font-semibold text-slate-700">Brief note</label>
+              <textarea
+                id="note"
+                v-model.trim="form.note"
+                rows="5"
+                placeholder="What happened? (optional, 1-2 sentences)"
+                class="w-full resize-none rounded-2xl border border-slate-200 bg-care-cream px-4 py-3 text-base leading-7 text-care-ink outline-none transition placeholder:text-slate-400 focus:border-care-teal focus:ring-4 focus:ring-care-teal/15"
+              ></textarea>
+              <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  class="inline-flex w-fit items-center justify-center rounded-full bg-care-mist px-4 py-2 text-sm font-semibold text-care-sageDark transition hover:bg-[#dfece5]"
+                  @click="suggestEmotion"
+                >
+                  AI Smart Tag: suggest emotion
+                  <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span>
+                </button>
+                <p v-if="suggestionMessage" class="text-sm font-medium text-slate-600">{{ suggestionMessage }}</p>
+              </div>
+            </div>
+
+            <div v-if="formError" class="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+              {{ formError }}
+            </div>
+
+            <button
+              type="submit"
+              class="inline-flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-2xl bg-care-sageDark px-5 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-[#416d59] focus:outline-none focus:ring-4 focus:ring-care-sage/35 sm:w-auto"
+            >
+              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M5 12.5 10 17 19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Save moment
+            </button>
+          </form>
+        </div>
+
+        <aside class="space-y-6">
+          <div class="rounded-[1.5rem] bg-white/78 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
+            <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Today</p>
+            <h2 class="mt-2 text-2xl font-semibold text-care-ink">A lighter handover</h2>
+            <p class="mt-3 text-base leading-7 text-slate-600">
+              Ana can capture what stood out, then bring a short reflection into shift handover without turning it into extra paperwork.
+            </p>
+            <div class="mt-5 grid gap-3 text-sm text-slate-700">
+              <div class="flex items-center gap-3 rounded-2xl bg-care-mist px-4 py-3">
+                <span class="h-2.5 w-2.5 rounded-full bg-care-sageDark"></span>
+                Morning tea and personal care
+              </div>
+              <div class="flex items-center gap-3 rounded-2xl bg-care-mist px-4 py-3">
+                <span class="h-2.5 w-2.5 rounded-full bg-care-blue"></span>
+                Reminiscence group at 14:00
+              </div>
+              <div class="flex items-center gap-3 rounded-2xl bg-care-mist px-4 py-3">
+                <span class="h-2.5 w-2.5 rounded-full bg-care-teal"></span>
+                Garden time before evening handover
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-[1.5rem] bg-white/82 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Residents</p>
+                <h2 class="mt-2 text-xl font-semibold text-care-ink">People behind the pattern</h2>
+              </div>
+              <svg class="float-soft h-12 w-12 text-care-sageDark" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <g fill="none">
+                  <path fill="currentColor" d="M6.5 12.5a.5.5 0 0 1 0-1h7a.5.5 0 0 1 0 1zm0 2.5a.5.5 0 0 1 0-1h7a.5.5 0 0 1 0 1z"/>
+                  <path fill="currentColor" fill-rule="evenodd" d="M11.185 1H4.5A1.5 1.5 0 0 0 3 2.5v15A1.5 1.5 0 0 0 4.5 19h11a1.5 1.5 0 0 0 1.5-1.5V7.202a1.5 1.5 0 0 0-.395-1.014l-4.314-4.702A1.5 1.5 0 0 0 11.185 1M4 2.5a.5.5 0 0 1 .5-.5h6.685a.5.5 0 0 1 .369.162l4.314 4.702a.5.5 0 0 1 .132.338V17.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5z" clip-rule="evenodd"/>
+                  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M11.5 2.1v4.7h4.7"/>
+                  <path fill="currentColor" d="M8.134 6.133a1.067 1.067 0 1 0 0-2.133a1.067 1.067 0 0 0 0 2.133"/>
+                  <path fill="currentColor" fill-rule="evenodd" d="M10.266 8.444c0-1.134-.955-1.955-2.133-1.955S6 7.309 6 8.444v.534a.356.356 0 0 0 .356.355h3.555a.356.356 0 0 0 .355-.355z" clip-rule="evenodd"/>
+                </g>
+              </svg>
+            </div>
+            <div class="grid gap-3">
+              <div
+                v-for="resident in residents"
+                :key="resident"
+                class="flex items-center gap-3 rounded-2xl bg-care-mist/80 p-3"
+              >
+                <img :src="profileFor(resident).photo" alt="" class="portrait-img h-12 w-12 rounded-xl" />
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-semibold text-care-ink">{{ resident }}</p>
+                  <p class="truncate text-xs text-slate-600">{{ profileFor(resident).rhythm }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="isReflecting" class="rounded-[1.5rem] bg-white/88 p-6 shadow-soft ring-1 ring-white/80">
+            <div class="flex items-center gap-3">
+              <div class="relative h-11 w-11 rounded-full bg-care-sage/30">
+                <span class="absolute inset-2 animate-ping rounded-full bg-care-sage/45"></span>
+                <span class="absolute inset-3 rounded-full bg-care-sageDark"></span>
+              </div>
+              <div>
+                <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">AI reflection engine <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span></p>
+                <p class="mt-1 text-base text-slate-600">listening for relational cues...</p>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="latestReflection && !isReflecting" class="rounded-[1.5rem] bg-white p-6 shadow-soft ring-1 ring-care-sage/25">
+            <div class="mb-4 flex items-center gap-3">
+              <img :src="profileFor(latestReflection.resident).photo" alt="" class="portrait-img h-12 w-12 rounded-2xl shadow-sm" />
+              <div>
+                <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">CareWeave AI reflection <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span></p>
+                <p class="text-sm text-slate-500">{{ latestReflection.resident }} · {{ latestReflection.emotion }}</p>
+              </div>
+            </div>
+            <p class="text-lg leading-8 text-care-ink">{{ latestReflection.aiPrompt }}</p>
+            <div v-if="!feedbackMessage" class="mt-6 flex flex-wrap gap-3">
+              <button type="button" class="rounded-full bg-care-sageDark px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#416d59]" @click="giveFeedback">Helpful</button>
+              <button type="button" class="rounded-full bg-care-mist px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200" @click="giveFeedback">Not quite</button>
+            </div>
+            <p v-else class="mt-6 rounded-2xl bg-care-mist px-4 py-3 text-sm font-semibold text-care-sageDark">
+              {{ feedbackMessage }}
+            </p>
+          </div>
+        </aside>
+      </section>
+
+      <section v-if="activeTab === 'History'" class="space-y-6">
+        <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">History</p>
+              <h2 class="mt-1 text-2xl font-semibold text-care-ink">Recorded moments</h2>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+              <select
+                id="filterResident"
+                v-model="historyFilter"
+                class="rounded-2xl border border-slate-200 bg-care-cream px-4 py-3 text-base text-care-ink outline-none transition focus:border-care-teal focus:ring-4 focus:ring-care-teal/15"
+              >
+                <option value="All">All residents</option>
+                <option v-for="resident in residents" :key="resident" :value="resident">{{ resident }}</option>
+              </select>
+              <div class="flex items-center gap-1.5 text-sm text-slate-500">
+                <input
+                  id="dateFrom"
+                  type="date"
+                  v-model="historyDateFrom"
+                  class="w-32 rounded-xl border border-slate-200 bg-care-cream px-3 py-3 text-sm text-care-ink outline-none transition focus:border-care-teal focus:ring-4 focus:ring-care-teal/15"
+                />
+                <span class="px-1 text-slate-400">—</span>
+                <input
+                  id="dateTo"
+                  type="date"
+                  v-model="historyDateTo"
+                  class="w-32 rounded-xl border border-slate-200 bg-care-cream px-3 py-3 text-sm text-care-ink outline-none transition focus:border-care-teal focus:ring-4 focus:ring-care-teal/15"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="historyFilter !== 'All'" class="rounded-[1.5rem] border border-care-sage/30 bg-white/90 p-5 shadow-soft sm:p-6">
+          <div class="flex items-start gap-4">
+            <img :src="profileFor(historyFilter).photo" alt="" class="portrait-img h-14 w-14 rounded-2xl shadow-sm" />
+            <div>
+              <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">AI relationship insight <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span></p>
+              <p class="mt-2 text-lg leading-8 text-care-ink">{{ historyResidentInsight }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="filteredMoments.length === 0" class="rounded-[1.5rem] bg-white/80 p-10 text-center shadow-soft ring-1 ring-white/80">
+          <p class="text-lg font-semibold text-care-ink">No moments recorded yet.</p>
+          <p class="mt-2 text-base text-slate-600">Your first reflection is just a click away.</p>
+        </div>
+
+        <div v-else class="grid gap-4">
+          <article
+            v-for="moment in paginatedMoments"
+            :key="moment.id"
+            class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80"
+          >
+            <div class="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+              <div class="flex items-center gap-4">
+                <img :src="profileFor(moment.resident).photo" alt="" class="portrait-img h-14 w-14 rounded-2xl shadow-sm" />
+                <div>
+                  <p class="text-sm font-medium text-slate-500">{{ moment.timestamp }}</p>
+                  <h3 class="mt-1 text-xl font-semibold text-care-ink">{{ moment.resident }}</h3>
+                </div>
+              </div>
+              <span class="inline-flex w-fit rounded-full px-3 py-1 text-sm font-semibold" :class="emotionStyles[moment.emotion].badge">
+                {{ moment.emotion }}
+              </span>
+            </div>
+            <p class="mt-4 text-base leading-7 text-slate-700">{{ moment.note || 'No brief note added.' }}</p>
+            <div class="mt-4 rounded-2xl bg-care-mist px-4 py-4">
+              <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Reflection prompt</p>
+              <p class="mt-2 text-base leading-7 text-care-ink">{{ moment.aiPrompt }}</p>
+            </div>
+          </article>
+        </div>
+
+        <div v-if="filteredMoments.length > pageSize" class="flex items-center justify-center gap-1 rounded-[1.25rem] bg-white/82 px-4 py-3 shadow-soft ring-1 ring-white/80">
+          <button type="button" class="inline-flex items-center justify-center rounded-lg p-2 text-slate-500 transition hover:bg-care-mist hover:text-care-ink disabled:opacity-30 disabled:cursor-not-allowed" :disabled="currentHistoryPage === 1" @click="currentHistoryPage = 1" title="First">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m11 17-5-5 5-5M18 17l-5-5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button type="button" class="inline-flex items-center justify-center rounded-lg p-2 text-slate-500 transition hover:bg-care-mist hover:text-care-ink disabled:opacity-30 disabled:cursor-not-allowed" :disabled="currentHistoryPage === 1" @click="currentHistoryPage--" title="Previous">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span class="mx-3 text-sm font-semibold text-care-ink whitespace-nowrap">
+            Page {{ currentHistoryPage }} / {{ totalHistoryPages }} <span class="font-normal text-slate-500">· {{ filteredMoments.length }} records</span>
+          </span>
+          <button type="button" class="inline-flex items-center justify-center rounded-lg p-2 text-slate-500 transition hover:bg-care-mist hover:text-care-ink disabled:opacity-30 disabled:cursor-not-allowed" :disabled="currentHistoryPage === totalHistoryPages" @click="currentHistoryPage++" title="Next">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 18 6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button type="button" class="inline-flex items-center justify-center rounded-lg p-2 text-slate-500 transition hover:bg-care-mist hover:text-care-ink disabled:opacity-30 disabled:cursor-not-allowed" :disabled="currentHistoryPage === totalHistoryPages" @click="currentHistoryPage = totalHistoryPages" title="Last">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 17 5-5-5-5M13 17l5-5-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <section v-if="activeTab === 'Overview'" class="space-y-6">
+        <div v-if="moments.length === 0" class="rounded-[1.5rem] bg-white/80 p-10 text-center shadow-soft ring-1 ring-white/80">
+          <p class="text-lg font-semibold text-care-ink">No trend data yet.</p>
+          <p class="mt-2 text-base text-slate-600">Record a few moments to see patterns with care.</p>
+        </div>
+
+        <div v-else class="space-y-6">
+          <div class="grid gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
+            <aside class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
+              <div class="flex items-center gap-4">
+                <img :src="selectedTrendProfile.photo" alt="" class="portrait-img h-20 w-20 rounded-[1.35rem] shadow-sm" />
+                <div>
+                  <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Smart resident focus</p>
+                  <h3 class="mt-1 text-xl font-semibold text-care-ink">{{ selectedTrendResident }}</h3>
+                  <p class="mt-1 text-sm text-slate-600">{{ selectedTrendProfile.country }}</p>
+                </div>
+              </div>
+
+              <label for="trendResident" class="mt-6 block text-sm font-semibold text-slate-700">Track resident</label>
+              <select
+                id="trendResident"
+                v-model="selectedTrendResident"
+                class="mt-2 w-full rounded-2xl border border-slate-200 bg-care-cream px-4 py-3 text-base text-care-ink outline-none transition focus:border-care-teal focus:ring-4 focus:ring-care-teal/15"
+              >
+                <option value="All residents">All residents</option>
+                <option v-for="resident in residents" :key="resident" :value="resident">{{ resident }}</option>
+              </select>
+
+              <div class="mt-5 space-y-3 text-sm leading-6 text-slate-700">
+                <div class="rounded-2xl bg-care-mist px-4 py-3">
+                  <span class="font-semibold text-care-ink">Room or place:</span> {{ selectedTrendProfile.room }}
+                </div>
+                <div class="rounded-2xl bg-care-mist px-4 py-3">
+                  <span class="font-semibold text-care-ink">Known rhythm:</span> {{ selectedTrendProfile.rhythm }}
+                </div>
+                <div v-if="latestTrendMoment" class="rounded-2xl bg-care-cream px-4 py-3">
+                  <span class="font-semibold text-care-ink">Latest:</span> {{ latestTrendMoment.emotion }} · {{ latestTrendMoment.timestamp }}
+                </div>
+              </div>
+            </aside>
+
+            <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
+              <div class="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-start">
+                <div>
+                  <h3 class="text-xl font-semibold text-care-ink">AI 7-Day Emotional Tone Tracker — {{ selectedTrendResident }}</h3>
+                  <p class="mt-1 text-sm text-slate-600">{{ selectedTrendResident === 'All residents' ? 'Scans tone and capture frequency across the whole home to surface patterns for handover.' : 'Tracking ' + selectedTrendResident + '\'s emotional tone and interaction frequency over the past week.' }}</p>
+                </div>
+                <div class="flex w-fit items-center gap-2 rounded-full bg-care-mist px-3 py-2 text-sm font-semibold text-care-sageDark">
+                  <span class="h-2.5 w-2.5 rounded-full bg-care-sageDark blink-soft"></span>
+                  AI trend scan active
+                </div>
+              </div>
+              <div class="chart-wrap tall">
+                <canvas ref="trendChart" aria-label="Seven day emotional tone line chart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="ai-sheen rounded-[1.5rem] border border-care-sage/35 bg-gradient-to-br from-white via-[#f7fbf8] to-care-mist p-5 shadow-soft sm:p-6">
+            <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div class="flex items-start gap-4">
+                <div class="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-care-sageDark text-white shadow-sm">
+                  <span class="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-emerald-300 pulse-soft"></span>
+                  <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 4v3M12 17v3M4 12h3M17 12h3M6.6 6.6l2.1 2.1M15.3 15.3l2.1 2.1M17.4 6.6l-2.1 2.1M8.7 15.3l-2.1 2.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">CareWeave AI insight</p>
+                    <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span>
+                  </div>
+                  <p class="mt-2 text-lg leading-8 text-care-ink">{{ overviewInsight }}</p>
+                </div>
+              </div>
+              <div class="grid min-w-[14rem] gap-2 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-1">
+                <div class="rounded-2xl bg-white/78 px-4 py-3">
+                  <span class="font-semibold text-care-ink">Signals scanned:</span> {{ moments.length }}
+                </div>
+                <div class="rounded-2xl bg-white/78 px-4 py-3">
+                  <span class="font-semibold text-care-ink">Focus:</span> {{ selectedTrendResident }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-7">
+            <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Overview</p>
+            <h2 class="mt-2 text-2xl font-semibold text-care-ink">Emotion trends this week</h2>
+            <p class="mt-2 max-w-3xl text-base leading-7 text-slate-600">
+              A gentle view of recent relational care moments across morning tea, garden time, reminiscence groups, and shift handovers.
+            </p>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-3">
+            <div class="rounded-[1.25rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80">
+              <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Positive signals</p>
+              <p class="mt-3 text-4xl font-semibold text-care-ink">{{ positiveCount }}</p>
+              <p class="mt-2 text-sm leading-6 text-slate-600">Warm connection or quietly settled moments.</p>
+            </div>
+            <div class="rounded-[1.25rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80">
+              <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Needs noticing</p>
+              <p class="mt-3 text-4xl font-semibold text-care-ink">{{ supportCount }}</p>
+              <p class="mt-2 text-sm leading-6 text-slate-600">Low, restless, or tearful moments to bring into handover.</p>
+            </div>
+            <div class="rounded-[1.25rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80">
+              <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Most observed</p>
+              <p class="mt-3 text-2xl font-semibold text-care-ink">{{ mostActiveResident.resident }}</p>
+              <p class="mt-2 text-sm leading-6 text-slate-600">{{ mostActiveResident.count }} moments captured this week.</p>
+            </div>
+          </div>
+
+          <div class="grid gap-6 lg:grid-cols-2">
+            <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
+              <div class="mb-4">
+                <h3 class="text-xl font-semibold text-care-ink">Emotion Distribution This Week</h3>
+                <p class="mt-1 text-sm text-slate-600">{{ moments.length }} recorded moments</p>
+              </div>
+              <div class="chart-wrap">
+                <canvas ref="emotionChart" aria-label="Emotion distribution doughnut chart"></canvas>
+              </div>
+            </div>
+
+            <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
+              <div class="mb-4">
+                <h3 class="text-xl font-semibold text-care-ink">Interactions per Resident (Last 7 Days)</h3>
+                <p class="mt-1 text-sm text-slate-600">Across all logged care moments</p>
+              </div>
+              <div class="chart-wrap">
+                <canvas ref="residentChart" aria-label="Interactions per resident bar chart"></canvas>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div v-if="gentleHighlights.length" class="grid gap-3">
+          <div
+            v-for="highlight in gentleHighlights"
+            :key="highlight"
+            class="rounded-[1.25rem] border border-care-blue/25 bg-white/82 px-5 py-4 text-base leading-7 text-care-ink shadow-sm"
+          >
+            {{ highlight }}
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const { createApp, nextTick } = Vue;
+
+    createApp({
+      data() {
+        const residents = [
+          'Mrs. O’Sullivan',
+          'Mr. Johansson',
+          'Signora Rossi',
+          'Herr Weber',
+          'Madame Dubois'
+        ];
+
+        const promptTemplates = {
+          'Warm connection': '{Name} reached out warmly today. What might have helped them feel safe enough to do that? Was there anything different in the morning routine?',
+          'Withdrawn / low': '{Name} seemed quieter than usual. Have you noticed any changes in their eating, sleeping, or movement today that could be linked?',
+          'Agitated / restless': '{Name} appeared unsettled. Could they be looking for something familiar—a photo, a song, or a routine that was important to them?',
+          'Tearful / emotional': "{Name}'s tears might be a response to something in their environment. What was happening around them just before this moment?",
+          'Quietly settled': 'These quiet moments with {Name} are the foundation of trust. How are you feeling yourself after this shift? Taking care of you matters too.'
+        };
+
+        const buildPrompt = (emotion, resident) => promptTemplates[emotion].replace('{Name}', resident);
+
+        const residentProfiles = {
+          'Mrs. O’Sullivan': {
+            initials: 'MO',
+            country: 'Ireland',
+            room: 'Willow room',
+            rhythm: 'Morning tea, window seat, Irish folk songs',
+            photo: 'assets/portraits/mrs-osullivan.png',
+            accent: '#8fb5a1',
+            hair: '#d8d0bf',
+            skin: '#f0c9a5',
+            top: '#6aa6a5'
+          },
+          'Mr. Johansson': {
+            initials: 'MJ',
+            country: 'Sweden',
+            room: 'Birch room',
+            rhythm: 'Newspaper, quiet lunch, garden path',
+            photo: 'assets/portraits/mr-johansson.png',
+            accent: '#7d9dbb',
+            hair: '#c4c9c6',
+            skin: '#e9bd93',
+            top: '#637f9a'
+          },
+          'Signora Rossi': {
+            initials: 'SR',
+            country: 'Italy',
+            room: 'Olive room',
+            rhythm: 'Music, herbs, folding linen together',
+            photo: 'assets/portraits/signora-rossi.png',
+            accent: '#c8aa83',
+            hair: '#6f5547',
+            skin: '#dfae86',
+            top: '#a97f4f'
+          },
+          'Herr Weber': {
+            initials: 'HW',
+            country: 'Germany',
+            room: 'Maple room',
+            rhythm: 'Work bag, coat by the door, early breakfast',
+            photo: 'assets/portraits/herr-weber.png',
+            accent: '#6aa6a5',
+            hair: '#b2b0a5',
+            skin: '#e7bc91',
+            top: '#4f7f68'
+          },
+          'Madame Dubois': {
+            initials: 'MD',
+            country: 'France',
+            room: 'Rose room',
+            rhythm: 'Napkins, soft dining room, stories of Lyon',
+            photo: 'assets/portraits/madame-dubois.png',
+            accent: '#c69aa9',
+            hair: '#c8c2ba',
+            skin: '#ecc29a',
+            top: '#ad7187'
+          }
+        };
+
+        return {
+          tabs: ['Record', 'History', 'Overview'],
+          activeTab: 'Overview',
+          residents,
+          residentProfiles,
+          selectedTrendResident: 'All residents',
+          emotions: Object.keys(promptTemplates),
+          emotionEmoji: {
+            'Warm connection': '😊',
+            'Withdrawn / low': '🌧️',
+            'Agitated / restless': '⚡',
+            'Tearful / emotional': '💧',
+            'Quietly settled': '🌿'
+          },
+          smartTagRules: [
+            { emotion: 'Warm connection', keywords: ['smile', 'held hand', 'laughed', 'reached out', 'warm', 'kiss'] },
+            { emotion: 'Withdrawn / low', keywords: ['quiet', 'silent', 'no response', 'wouldn’t eat', "wouldn't eat", 'stayed in bed'] },
+            { emotion: 'Agitated / restless', keywords: ['shouting', 'pacing', 'looking for', 'restless', 'can’t sit still', "can't sit still"] },
+            { emotion: 'Tearful / emotional', keywords: ['tears', 'crying', 'upset', 'sobbing', 'weep'] },
+            { emotion: 'Quietly settled', keywords: ['calm', 'peaceful', 'sat together', 'watched', 'relaxed'] }
+          ],
+          promptTemplates,
+          emotionChart: null,
+          residentChart: null,
+          trendChart: null,
+          historyFilter: 'Signora Rossi',
+          historyDateFrom: '2026-05-06',
+          historyDateTo: '2026-05-19',
+          currentHistoryPage: 1,
+          pageSize: 5,
+          suggestedEmotion: '',
+          suggestionMessage: '',
+          isReflecting: false,
+          latestReflection: null,
+          feedbackMessage: '',
+          formError: '',
+          form: {
+            resident: '',
+            emotion: '',
+            note: ''
+          },
+          emotionStyles: {
+            'Warm connection': {
+              idle: 'border-[#dbe8df] bg-[#f4f8f5] text-[#426d55] hover:border-[#8fb5a1]',
+              selected: 'border-[#4f7f68] bg-[#dfece5] text-[#2f5645] shadow-sm',
+              badge: 'bg-[#dfece5] text-[#2f5645]'
+            },
+            'Withdrawn / low': {
+              idle: 'border-[#d7e3ef] bg-[#f2f6fa] text-[#4f6f8d] hover:border-[#7d9dbb]',
+              selected: 'border-[#637f9a] bg-[#dfe9f2] text-[#3f5e7b] shadow-sm',
+              badge: 'bg-[#dfe9f2] text-[#3f5e7b]'
+            },
+            'Agitated / restless': {
+              idle: 'border-[#eadfd1] bg-[#f8f3ed] text-[#84613d] hover:border-[#c8aa83]',
+              selected: 'border-[#a97f4f] bg-[#efe2d0] text-[#6f4b25] shadow-sm',
+              badge: 'bg-[#efe2d0] text-[#6f4b25]'
+            },
+            'Tearful / emotional': {
+              idle: 'border-[#e7d7de] bg-[#f8f1f4] text-[#875a6d] hover:border-[#c69aa9]',
+              selected: 'border-[#ad7187] bg-[#f0dfe6] text-[#723f54] shadow-sm',
+              badge: 'bg-[#f0dfe6] text-[#723f54]'
+            },
+            'Quietly settled': {
+              idle: 'border-[#d7e5e5] bg-[#f0f7f7] text-[#437273] hover:border-[#6aa6a5]',
+              selected: 'border-[#4b8c8c] bg-[#dceeee] text-[#285b5b] shadow-sm',
+              badge: 'bg-[#dceeee] text-[#285b5b]'
+            }
+          },
+          moments: [
+            {
+              id: 1,
+              timestamp: '2026-05-13 10:15',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Quietly settled',
+              note: 'Sat calmly by the window after morning tea and watched the rain with Ana.',
+              aiPrompt: buildPrompt('Quietly settled', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 2,
+              timestamp: '2026-05-13 14:40',
+              resident: 'Mr. Johansson',
+              emotion: 'Withdrawn / low',
+              note: 'Stayed apart from the reminiscence group and answered softly when Lars checked in.',
+              aiPrompt: buildPrompt('Withdrawn / low', 'Mr. Johansson')
+            },
+            {
+              id: 3,
+              timestamp: '2026-05-13 16:05',
+              resident: 'Signora Rossi',
+              emotion: 'Warm connection',
+              note: 'Smiled and hummed along when an old Italian song played during afternoon tea.',
+              aiPrompt: buildPrompt('Warm connection', 'Signora Rossi')
+            },
+            {
+              id: 4,
+              timestamp: '2026-05-14 09:30',
+              resident: 'Herr Weber',
+              emotion: 'Agitated / restless',
+              note: 'Walked repeatedly towards the corridor before personal care and asked about his coat.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Herr Weber')
+            },
+            {
+              id: 5,
+              timestamp: '2026-05-14 15:20',
+              resident: 'Madame Dubois',
+              emotion: 'Tearful / emotional',
+              note: 'Became tearful when the dining room grew noisy before the late lunch sitting.',
+              aiPrompt: buildPrompt('Tearful / emotional', 'Madame Dubois')
+            },
+            {
+              id: 6,
+              timestamp: '2026-05-15 11:10',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Warm connection',
+              note: 'Held my hand and smiled during a quiet chat after morning tea.',
+              aiPrompt: buildPrompt('Warm connection', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 7,
+              timestamp: '2026-05-15 13:50',
+              resident: 'Mr. Johansson',
+              emotion: 'Withdrawn / low',
+              note: 'Ate very little at lunch and preferred to sit near the doorway.',
+              aiPrompt: buildPrompt('Withdrawn / low', 'Mr. Johansson')
+            },
+            {
+              id: 8,
+              timestamp: '2026-05-16 10:05',
+              resident: 'Signora Rossi',
+              emotion: 'Quietly settled',
+              note: 'Relaxed in the garden with a blanket and watched the herbs being watered.',
+              aiPrompt: buildPrompt('Quietly settled', 'Signora Rossi')
+            },
+            {
+              id: 9,
+              timestamp: '2026-05-16 17:30',
+              resident: 'Herr Weber',
+              emotion: 'Agitated / restless',
+              note: 'Seemed unsettled during evening handover and asked several times when the bus would come.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Herr Weber')
+            },
+            {
+              id: 10,
+              timestamp: '2026-05-17 12:25',
+              resident: 'Madame Dubois',
+              emotion: 'Warm connection',
+              note: 'Laughed with Ana while folding napkins and spoke about summers in Lyon.',
+              aiPrompt: buildPrompt('Warm connection', 'Madame Dubois')
+            },
+            {
+              id: 11,
+              timestamp: '2026-05-18 09:45',
+              resident: 'Mr. Johansson',
+              emotion: 'Withdrawn / low',
+              note: 'Declined the morning paper and stayed in his room until Lars invited him for tea.',
+              aiPrompt: buildPrompt('Withdrawn / low', 'Mr. Johansson')
+            },
+            {
+              id: 12,
+              timestamp: '2026-05-18 15:10',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Quietly settled',
+              note: 'Rested comfortably after the music group and nodded when asked if she wanted the window open.',
+              aiPrompt: buildPrompt('Quietly settled', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 13,
+              timestamp: '2026-05-19 10:35',
+              resident: 'Herr Weber',
+              emotion: 'Agitated / restless',
+              note: 'Looked for his old work bag before breakfast but settled after seeing a familiar photo.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Herr Weber')
+            },
+            {
+              id: 14,
+              timestamp: '2026-05-19 14:05',
+              resident: 'Signora Rossi',
+              emotion: 'Warm connection',
+              note: 'Invited another resident to sit beside her during garden time.',
+              aiPrompt: buildPrompt('Warm connection', 'Signora Rossi')
+            },
+            {
+              id: 15,
+              timestamp: '2026-05-12 09:20',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Warm connection',
+              note: 'Sang quietly along to a familiar Irish tune and tapped her fingers on the armrest.',
+              aiPrompt: buildPrompt('Warm connection', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 16,
+              timestamp: '2026-05-12 11:45',
+              resident: 'Signora Rossi',
+              emotion: 'Quietly settled',
+              note: 'Arranged fresh basil on the kitchen windowsill and smiled at the smell.',
+              aiPrompt: buildPrompt('Quietly settled', 'Signora Rossi')
+            },
+            {
+              id: 17,
+              timestamp: '2026-05-12 15:30',
+              resident: 'Mr. Johansson',
+              emotion: 'Withdrawn / low',
+              note: 'Sat alone in the garden for most of the afternoon and declined offers to join the group.',
+              aiPrompt: buildPrompt('Withdrawn / low', 'Mr. Johansson')
+            },
+            {
+              id: 18,
+              timestamp: '2026-05-12 16:50',
+              resident: 'Herr Weber',
+              emotion: 'Agitated / restless',
+              note: 'Paced near the front entrance and repeatedly checked his watch before dinner.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Herr Weber')
+            },
+            {
+              id: 19,
+              timestamp: '2026-05-12 10:10',
+              resident: 'Madame Dubois',
+              emotion: 'Tearful / emotional',
+              note: 'Became emotional while looking through a photo album of Lyon brought by her daughter.',
+              aiPrompt: buildPrompt('Tearful / emotional', 'Madame Dubois')
+            },
+            {
+              id: 20,
+              timestamp: '2026-05-13 08:45',
+              resident: 'Herr Weber',
+              emotion: 'Quietly settled',
+              note: 'Sat calmly with his coffee and newspaper, nodding along to the morning radio.',
+              aiPrompt: buildPrompt('Quietly settled', 'Herr Weber')
+            },
+            {
+              id: 21,
+              timestamp: '2026-05-13 11:30',
+              resident: 'Madame Dubois',
+              emotion: 'Warm connection',
+              note: 'Taught Ana how to fold napkins the way her mother did in Lyon.',
+              aiPrompt: buildPrompt('Warm connection', 'Madame Dubois')
+            },
+            {
+              id: 22,
+              timestamp: '2026-05-13 13:15',
+              resident: 'Signora Rossi',
+              emotion: 'Agitated / restless',
+              note: 'Became frustrated when she couldn\'t find her favourite scarf before lunch.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Signora Rossi')
+            },
+            {
+              id: 23,
+              timestamp: '2026-05-14 10:30',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Tearful / emotional',
+              note: 'Tears welled up during a quiet moment by the window — said she missed her sister.',
+              aiPrompt: buildPrompt('Tearful / emotional', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 24,
+              timestamp: '2026-05-14 11:00',
+              resident: 'Mr. Johansson',
+              emotion: 'Warm connection',
+              note: 'Opened up about his old sailing days after Lars asked about a photograph in his room.',
+              aiPrompt: buildPrompt('Warm connection', 'Mr. Johansson')
+            },
+            {
+              id: 25,
+              timestamp: '2026-05-14 16:40',
+              resident: 'Signora Rossi',
+              emotion: 'Quietly settled',
+              note: 'Listened to Italian opera on the radio and tapped her foot gently to the rhythm.',
+              aiPrompt: buildPrompt('Quietly settled', 'Signora Rossi')
+            },
+            {
+              id: 26,
+              timestamp: '2026-05-15 08:30',
+              resident: 'Madame Dubois',
+              emotion: 'Quietly settled',
+              note: 'Enjoyed a calm breakfast by herself, watching the birds outside the dining room.',
+              aiPrompt: buildPrompt('Quietly settled', 'Madame Dubois')
+            },
+            {
+              id: 27,
+              timestamp: '2026-05-15 14:20',
+              resident: 'Herr Weber',
+              emotion: 'Withdrawn / low',
+              note: 'Skipped the afternoon group activity and stayed in his room with the door ajar.',
+              aiPrompt: buildPrompt('Withdrawn / low', 'Herr Weber')
+            },
+            {
+              id: 28,
+              timestamp: '2026-05-15 16:10',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Quietly settled',
+              note: 'Knitted peacefully in the common room while chatting softly with Signora Rossi.',
+              aiPrompt: buildPrompt('Quietly settled', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 29,
+              timestamp: '2026-05-16 09:15',
+              resident: 'Mr. Johansson',
+              emotion: 'Warm connection',
+              note: 'Shared a genuine laugh with Ana during his morning walk around the garden path.',
+              aiPrompt: buildPrompt('Warm connection', 'Mr. Johansson')
+            },
+            {
+              id: 30,
+              timestamp: '2026-05-16 11:50',
+              resident: 'Madame Dubois',
+              emotion: 'Agitated / restless',
+              note: 'Grew impatient waiting for lunch and kept adjusting the table setting.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Madame Dubois')
+            },
+            {
+              id: 31,
+              timestamp: '2026-05-16 14:30',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Warm connection',
+              note: 'Told Ana a story about dancing at a céilí in Cork when she was a young woman.',
+              aiPrompt: buildPrompt('Warm connection', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 32,
+              timestamp: '2026-05-17 08:50',
+              resident: 'Signora Rossi',
+              emotion: 'Tearful / emotional',
+              note: 'Cried softly when a song reminded her of her late husband. Accepted a gentle hand on her shoulder.',
+              aiPrompt: buildPrompt('Tearful / emotional', 'Signora Rossi')
+            },
+            {
+              id: 33,
+              timestamp: '2026-05-17 10:20',
+              resident: 'Herr Weber',
+              emotion: 'Warm connection',
+              note: 'Helped Lars carry chairs for the morning circle group and seemed proud to be useful.',
+              aiPrompt: buildPrompt('Warm connection', 'Herr Weber')
+            },
+            {
+              id: 34,
+              timestamp: '2026-05-17 13:40',
+              resident: 'Mr. Johansson',
+              emotion: 'Quietly settled',
+              note: 'Read the newspaper cover to cover and remarked on an article about the archipelago.',
+              aiPrompt: buildPrompt('Quietly settled', 'Mr. Johansson')
+            },
+            {
+              id: 35,
+              timestamp: '2026-05-18 11:15',
+              resident: 'Madame Dubois',
+              emotion: 'Warm connection',
+              note: 'Complimented the cook on the soup and shared a memory of her grandmother\'s kitchen.',
+              aiPrompt: buildPrompt('Warm connection', 'Madame Dubois')
+            },
+            {
+              id: 36,
+              timestamp: '2026-05-18 16:25',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Withdrawn / low',
+              note: 'Seemed tired and distant during the afternoon social. Preferred to stay by the window alone.',
+              aiPrompt: buildPrompt('Withdrawn / low', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 37,
+              timestamp: '2026-05-19 08:15',
+              resident: 'Signora Rossi',
+              emotion: 'Warm connection',
+              note: 'Greeted Ana with a warm hug and said the morning light reminded her of Tuscany.',
+              aiPrompt: buildPrompt('Warm connection', 'Signora Rossi')
+            }
+          ]
+        };
+      },
+      computed: {
+        filteredMoments() {
+          const source = this.historyFilter === 'All'
+            ? this.moments
+            : this.moments.filter(moment => moment.resident === this.historyFilter);
+          return [...source].sort((a, b) => b.id - a.id);
+        },
+        totalHistoryPages() {
+          return Math.ceil(this.filteredMoments.length / this.pageSize) || 1;
+        },
+        paginatedMoments() {
+          const start = (this.currentHistoryPage - 1) * this.pageSize;
+          return this.filteredMoments.slice(start, start + this.pageSize);
+        },
+        selectedTrendMoments() {
+          const source = this.selectedTrendResident === 'All residents'
+            ? this.moments
+            : this.moments.filter(moment => moment.resident === this.selectedTrendResident);
+          return [...source].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+        },
+        selectedTrendProfile() {
+          if (this.selectedTrendResident === 'All residents') {
+            return {
+              initials: 'CW',
+              country: 'Whole home',
+              room: 'All households',
+              rhythm: 'Shared patterns across the week',
+              photo: 'assets/portraits/all-residents-care-home.png',
+              accent: '#6aa6a5',
+              hair: '#b8c9c2',
+              skin: '#eec8a5',
+              top: '#4f7f68'
+            };
+          }
+          return this.residentProfiles[this.selectedTrendResident];
+        },
+        latestTrendMoment() {
+          return [...this.selectedTrendMoments].sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0] || null;
+        },
+        positiveCount() {
+          return this.moments.filter(moment => ['Warm connection', 'Quietly settled'].includes(moment.emotion)).length;
+        },
+        supportCount() {
+          return this.moments.filter(moment => ['Withdrawn / low', 'Agitated / restless', 'Tearful / emotional'].includes(moment.emotion)).length;
+        },
+        mostActiveResident() {
+          return this.residents
+            .map(resident => ({ resident, count: this.moments.filter(moment => moment.resident === resident).length }))
+            .sort((a, b) => b.count - a.count)[0];
+        },
+        overviewInsight() {
+          const recent = this.lastNDaysMoments(7);
+          const scope = this.selectedTrendResident === 'All residents'
+            ? recent
+            : recent.filter(moment => moment.resident === this.selectedTrendResident);
+
+          if (this.selectedTrendResident !== 'All residents') {
+            const emotions = scope.map(m => m.emotion);
+            const warmCount = emotions.filter(e => e === 'Warm connection' || e === 'Quietly settled').length;
+            const lowCount = emotions.filter(e => e === 'Withdrawn / low').length;
+            const agitatedCount = emotions.filter(e => e === 'Agitated / restless').length;
+            const tearfulCount = emotions.filter(e => e === 'Tearful / emotional').length;
+
+            if (lowCount >= 2) {
+              return `${this.selectedTrendResident} has had several low moments this week. You might want to mention it at handover.`;
+            }
+            if (agitatedCount >= 2) {
+              return `${this.selectedTrendResident} has appeared restless more than usual. Could a familiar object or routine help them settle?`;
+            }
+            if (tearfulCount >= 2) {
+              return `${this.selectedTrendResident} has been tearful recently. Has anything changed in their environment or routine?`;
+            }
+            if (warmCount >= 2) {
+              return `${this.selectedTrendResident} has shown warmth and settled moments this week. These small connections are worth celebrating.`;
+            }
+            if (scope.length === 0) {
+              return `No recent moments recorded for ${this.selectedTrendResident}. Capturing a note or two this week may reveal helpful patterns.`;
+            }
+            return `${this.selectedTrendResident}'s emotional tone looks balanced this week. Keep noticing the small things.`;
+          }
+
+          const lowResident = this.residents.find(resident => {
+            return recent.filter(moment => moment.resident === resident && moment.emotion === 'Withdrawn / low').length >= 3;
+          });
+          if (lowResident) {
+            return `${lowResident} has had several low moments this week. You might want to mention it at handover.`;
+          }
+
+          const agitationCount = this.moments.filter(moment => moment.emotion === 'Agitated / restless').length;
+          if (this.moments.length && agitationCount / this.moments.length > 0.3) {
+            return 'Agitation has been more frequent this week. Could something in the care-home rhythm have changed?';
+          }
+
+          return 'Moments of warmth and quiet connection are still the most common patterns you’ve recorded. That’s something to hold on to.';
+        },
+        historyResidentInsight() {
+          if (this.historyFilter === 'All') return '';
+
+          const records = this.moments.filter(moment => moment.resident === this.historyFilter);
+          const recent = this.lastNDaysMoments(5).filter(moment => moment.resident === this.historyFilter);
+          const tearfulCount = recent.filter(moment => moment.emotion === 'Tearful / emotional').length;
+          if (tearfulCount >= 2) {
+            return `${this.historyFilter} has been tearful more than once this week. Has anything in their routine or environment changed recently?`;
+          }
+
+          const emotionCounts = this.emotions.map(emotion => ({
+            emotion,
+            count: records.filter(moment => moment.emotion === emotion).length
+          })).sort((a, b) => b.count - a.count);
+          if (emotionCounts[0] && emotionCounts[0].emotion === 'Withdrawn / low' && emotionCounts[0].count > 0) {
+            return `${this.historyFilter} seems to be spending a lot of time withdrawn. Would a one-to-one activity be possible this week?`;
+          }
+
+          const hasWarm = records.some(moment => moment.emotion === 'Warm connection');
+          const hasAgitated = records.some(moment => moment.emotion === 'Agitated / restless');
+          if (hasWarm && hasAgitated) {
+            return `${this.historyFilter} shows both moments of warmth and restlessness. This might be an important pattern to share with the care team.`;
+          }
+
+          return `${this.historyFilter}'s recent moments appear balanced. Keep noticing the small things.`;
+        },
+        gentleHighlights() {
+          return this.residents
+            .map(resident => {
+              const entries = this.moments.filter(moment => moment.resident === resident);
+              if (entries.length >= 2 && entries.every(moment => ['Withdrawn / low', 'Agitated / restless'].includes(moment.emotion))) {
+                const tone = entries.some(moment => moment.emotion === 'Withdrawn / low') ? 'low moments' : 'unsettled moments';
+                return `${resident} has had several ${tone} this week. You might want to mention it at handover.`;
+              }
+              return '';
+            })
+            .filter(Boolean);
+        }
+      },
+      watch: {
+        moments: {
+          deep: true,
+          handler() {
+            if (this.activeTab === 'Overview') {
+              this.$nextTick(this.renderCharts);
+            }
+          }
+        },
+        selectedTrendResident() {
+          if (this.activeTab === 'Overview') {
+            this.$nextTick(this.renderCharts);
+          }
+        },
+        historyFilter() {
+          this.currentHistoryPage = 1;
+        }
+      },
+      mounted() {
+        window.addEventListener('resize', this.resizeCharts);
+        if (this.activeTab === 'Overview') {
+          nextTick(() => this.renderCharts());
+        }
+      },
+      beforeUnmount() {
+        window.removeEventListener('resize', this.resizeCharts);
+        this.destroyCharts();
+      },
+      methods: {
+        setTab(tab) {
+          this.activeTab = tab;
+          if (tab === 'Overview') {
+            nextTick(() => this.renderCharts());
+          }
+        },
+        selectEmotion(emotion) {
+          this.form.emotion = emotion;
+          if (this.suggestedEmotion === emotion) {
+            this.suggestedEmotion = '';
+            this.suggestionMessage = '';
+          }
+        },
+        suggestEmotion() {
+          const note = this.form.note.toLowerCase();
+          this.suggestedEmotion = '';
+          if (!note.trim()) {
+            this.suggestionMessage = 'Add a few words first, or choose manually.';
+            return;
+          }
+
+          const match = this.smartTagRules.find(rule => rule.keywords.some(keyword => note.includes(keyword)));
+          if (!match) {
+            this.suggestionMessage = 'No strong clue – please choose manually.';
+            return;
+          }
+
+          this.suggestedEmotion = match.emotion;
+          this.suggestionMessage = `Suggested: ${this.emotionEmoji[match.emotion]} ${match.emotion}`;
+        },
+        saveMoment() {
+          this.formError = '';
+          if (!this.form.resident || !this.form.emotion) {
+            this.formError = 'Please choose a resident and select one emotion tag.';
+            return;
+          }
+
+          const moment = {
+            id: Date.now(),
+            timestamp: this.formatTimestamp(new Date()),
+            resident: this.form.resident,
+            emotion: this.form.emotion,
+            note: this.form.note || '',
+            aiPrompt: this.buildPrompt(this.form.emotion, this.form.resident)
+          };
+
+          this.moments.push(moment);
+          this.latestReflection = null;
+          this.feedbackMessage = '';
+          this.suggestedEmotion = '';
+          this.suggestionMessage = '';
+          this.isReflecting = true;
+          this.form = { resident: '', emotion: '', note: '' };
+
+          setTimeout(() => {
+            this.latestReflection = moment;
+            this.isReflecting = false;
+          }, 1200);
+        },
+        giveFeedback() {
+          this.feedbackMessage = 'Thanks for helping us improve';
+          setTimeout(() => {
+            this.feedbackMessage = '';
+          }, 2400);
+        },
+        profileFor(resident) {
+          return this.residentProfiles[resident];
+        },
+        buildPrompt(emotion, resident) {
+          return this.promptTemplates[emotion].replace('{Name}', resident);
+        },
+        formatTimestamp(date) {
+          const pad = value => String(value).padStart(2, '0');
+          return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        },
+        parseMomentDate(moment) {
+          return new Date(moment.timestamp.replace(' ', 'T'));
+        },
+        latestMomentDate() {
+          return this.moments.length
+            ? this.parseMomentDate([...this.moments].sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0])
+            : new Date();
+        },
+        lastNDaysMoments(days) {
+          const latest = this.latestMomentDate();
+          const start = new Date(latest);
+          start.setDate(start.getDate() - (days - 1));
+          start.setHours(0, 0, 0, 0);
+          return this.moments.filter(moment => this.parseMomentDate(moment) >= start);
+        },
+        dayKey(date) {
+          const pad = value => String(value).padStart(2, '0');
+          return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+        },
+        dayLabel(date) {
+          return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        },
+        trendDays() {
+          const latest = this.latestMomentDate();
+          const start = new Date(latest);
+          start.setDate(start.getDate() - 6);
+          return Array.from({ length: 7 }, (_, index) => {
+            const date = new Date(start);
+            date.setDate(start.getDate() + index);
+            return date;
+          });
+        },
+        emotionTone(emotion) {
+          const map = {
+            'Warm connection': 2,
+            'Quietly settled': 1,
+            'Tearful / emotional': -1,
+            'Withdrawn / low': -2,
+            'Agitated / restless': -2
+          };
+          return map[emotion] || 0;
+        },
+        trendSeries() {
+          return this.trendDays().map(day => {
+            const key = this.dayKey(day);
+            const entries = this.selectedTrendMoments.filter(moment => this.dayKey(this.parseMomentDate(moment)) === key);
+            const averageTone = entries.length
+              ? entries.reduce((total, moment) => total + this.emotionTone(moment.emotion), 0) / entries.length
+              : 0;
+            return {
+              label: this.dayLabel(day),
+              count: entries.length,
+              tone: Number(averageTone.toFixed(2))
+            };
+          });
+        },
+        countsByEmotion() {
+          return this.emotions.map(emotion => this.moments.filter(moment => moment.emotion === emotion).length);
+        },
+        countsByResident() {
+          return this.residents.map(resident => this.moments.filter(moment => moment.resident === resident).length);
+        },
+        renderCharts() {
+          if (typeof Chart === 'undefined' || !this.$refs.emotionChart || !this.$refs.residentChart || !this.$refs.trendChart) {
+            return;
+          }
+          this.destroyCharts();
+
+          const chartText = '#263532';
+          Chart.defaults.font.family = 'Inter, ui-sans-serif, system-ui, Segoe UI, Arial, sans-serif';
+          Chart.defaults.color = chartText;
+
+          this.emotionChart = new Chart(this.$refs.emotionChart, {
+            type: 'doughnut',
+            data: {
+              labels: this.emotions,
+              datasets: [{
+                data: this.countsByEmotion(),
+                backgroundColor: ['#8fb5a1', '#7d9dbb', '#c8aa83', '#c69aa9', '#6aa6a5'],
+                borderColor: '#ffffff',
+                borderWidth: 4,
+                hoverOffset: 8
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: '62%',
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                  labels: {
+                    boxWidth: 14,
+                    boxHeight: 14,
+                    padding: 18,
+                    usePointStyle: true
+                  }
+                },
+                tooltip: {
+                  backgroundColor: '#263532',
+                  padding: 12,
+                  cornerRadius: 12
+                }
+              }
+            }
+          });
+
+          this.residentChart = new Chart(this.$refs.residentChart, {
+            type: 'bar',
+            data: {
+              labels: this.residents,
+              datasets: [{
+                label: 'Recorded moments',
+                data: this.countsByResident(),
+                backgroundColor: '#7d9dbb',
+                borderColor: '#637f9a',
+                borderWidth: 1,
+                borderRadius: 12,
+                maxBarThickness: 52
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: {
+                  grid: { display: false },
+                  ticks: { maxRotation: 25, minRotation: 0 }
+                },
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    precision: 0,
+                    stepSize: 1
+                  },
+                  grid: { color: '#e4ecea' }
+                }
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: '#263532',
+                  padding: 12,
+                  cornerRadius: 12
+                }
+              }
+            }
+          });
+
+          const trend = this.trendSeries();
+          this.trendChart = new Chart(this.$refs.trendChart, {
+            type: 'line',
+            data: {
+              labels: trend.map(point => point.label),
+              datasets: [
+                {
+                  label: 'Emotional tone',
+                  data: trend.map(point => point.tone),
+                  borderColor: '#4f7f68',
+                  backgroundColor: 'rgba(143, 181, 161, 0.16)',
+                  borderWidth: 3,
+                  pointBackgroundColor: '#ffffff',
+                  pointBorderColor: '#4f7f68',
+                  pointBorderWidth: 3,
+                  pointRadius: 5,
+                  pointHoverRadius: 7,
+                  fill: true,
+                  tension: 0.38,
+                  yAxisID: 'tone'
+                },
+                {
+                  label: 'Recorded moments',
+                  data: trend.map(point => point.count),
+                  borderColor: '#7d9dbb',
+                  backgroundColor: '#7d9dbb',
+                  borderWidth: 2,
+                  pointRadius: 4,
+                  tension: 0.28,
+                  yAxisID: 'count'
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              interaction: {
+                mode: 'index',
+                intersect: false
+              },
+              scales: {
+                tone: {
+                  position: 'left',
+                  min: -2.5,
+                  max: 2.5,
+                  ticks: {
+                    stepSize: 1,
+                    callback: value => value > 0 ? `+${value}` : value
+                  },
+                  grid: { color: '#e4ecea' },
+                  title: {
+                    display: true,
+                    text: 'Tone'
+                  }
+                },
+                count: {
+                  position: 'right',
+                  beginAtZero: true,
+                  ticks: {
+                    precision: 0,
+                    stepSize: 1
+                  },
+                  grid: { drawOnChartArea: false },
+                  title: {
+                    display: true,
+                    text: 'Moments'
+                  }
+                },
+                x: {
+                  grid: { display: false }
+                }
+              },
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                  labels: {
+                    boxWidth: 14,
+                    boxHeight: 14,
+                    padding: 18,
+                    usePointStyle: true
+                  }
+                },
+                tooltip: {
+                  backgroundColor: '#263532',
+                  padding: 12,
+                  cornerRadius: 12
+                }
+              }
+            }
+          });
+        },
+        resizeCharts() {
+          if (this.emotionChart) this.emotionChart.resize();
+          if (this.residentChart) this.residentChart.resize();
+          if (this.trendChart) this.trendChart.resize();
+        },
+        destroyCharts() {
+          if (this.emotionChart) {
+            this.emotionChart.destroy();
+            this.emotionChart = null;
+          }
+          if (this.residentChart) {
+            this.residentChart.destroy();
+            this.residentChart = null;
+          }
+          if (this.trendChart) {
+            this.trendChart.destroy();
+            this.trendChart = null;
+          }
+        }
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
