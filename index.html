@@ -129,11 +129,27 @@
             v-for="tab in tabs"
             :key="tab"
             type="button"
-            class="rounded-xl px-4 py-3 text-sm font-semibold transition"
+            class="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition"
             :class="activeTab === tab ? 'bg-white text-care-sageDark shadow-sm' : 'text-slate-600 hover:text-care-ink'"
             @click="setTab(tab)"
           >
-            {{ tab }}
+            <svg v-if="tab === 'Overview'" class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 17.5c2.2-4.2 4.5-5.4 6.8-3.5 1.9 1.6 3.4 1.2 4.6-.9L20 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              <circle cx="10.8" cy="14" r="1.15" fill="currentColor"/>
+              <circle cx="15.4" cy="13.1" r="1.15" fill="currentColor"/>
+            </svg>
+            <svg v-else-if="tab === 'Record'" class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M7 4.8h7.5L18 8.3v10.9a1.8 1.8 0 0 1-1.8 1.8H7a1.8 1.8 0 0 1-1.8-1.8V6.6A1.8 1.8 0 0 1 7 4.8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+              <path d="M14.5 4.8v3.7H18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M11.6 16.4s-3-1.8-3-4.2a1.75 1.75 0 0 1 3-1.25 1.75 1.75 0 0 1 3 1.25c0 2.4-3 4.2-3 4.2Z" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg v-else class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 7.2v5.1l3.2 1.9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M5.5 6.7A8.2 8.2 0 1 1 4 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M4.2 4.6v4.1h4.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>{{ tab }}</span>
           </button>
         </nav>
       </div>
@@ -175,7 +191,9 @@
                     :class="[form.emotion === emotion ? emotionStyles[emotion].selected : emotionStyles[emotion].idle, suggestedEmotion === emotion && form.emotion !== emotion ? 'ring-4 ring-emerald-200 shadow-[0_0_0_4px_rgba(143,181,161,0.22)]' : '']"
                     @click="selectEmotion(emotion)"
                   >
-                    <span class="mr-1.5" aria-hidden="true">{{ emotionEmoji[emotion] }}</span>{{ emotion }}
+                    <span class="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full" :style="emotionIconStyle(emotion)" aria-hidden="true">
+                      <img class="block h-3.5 w-3.5" :src="emotionVisual(emotion).icon" alt="" />
+                    </span>{{ emotion }}
                     <span v-if="suggestedEmotion === emotion && form.emotion !== emotion" class="mt-1 block text-xs font-semibold text-care-sageDark">✨ Suggested</span>
                   </button>
                 </div>
@@ -353,8 +371,8 @@
         </div>
 
         <div v-if="filteredMoments.length === 0" class="rounded-[1.5rem] bg-white/80 p-10 text-center shadow-soft ring-1 ring-white/80">
-          <p class="text-lg font-semibold text-care-ink">No moments recorded yet.</p>
-          <p class="mt-2 text-base text-slate-600">Your first reflection is just a click away.</p>
+          <p class="text-lg font-semibold text-care-ink">{{ historyEmptyTitle }}</p>
+          <p class="mt-2 text-base text-slate-600">{{ historyEmptyMessage }}</p>
         </div>
 
         <div v-else class="grid gap-4">
@@ -448,7 +466,7 @@
                 <div>
                   <h3 class="text-xl font-semibold text-care-ink">7-Day Emotional Tone Tracker</h3>
                   <p class="mt-1 text-2xl font-semibold text-care-sageDark tracking-tight">{{ selectedTrendResident }}</p>
-                  <p class="mt-2 text-sm text-slate-500">{{ selectedTrendResident === 'All residents' ? 'Emotional tone and observation frequency across the whole home.' : 'Emotional tone and observation frequency over the past week.' }}</p>
+                  <p class="mt-2 text-sm text-slate-500">{{ selectedTrendResident === 'All residents' ? 'A soft tone line across the whole home, with emotion traces kept visible in the background.' : 'A soft tone line over the past week, with emotion traces kept visible in the background.' }}</p>
                 </div>
               </div>
               <div class="chart-wrap tall">
@@ -457,11 +475,79 @@
 
               <div class="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 border-t border-care-sage/20 pt-4">
                 <span v-for="item in trendLegend" :key="item.label" class="inline-flex items-center gap-1.5 text-xs text-slate-500">
-                  <span class="h-3 w-3 rounded-sm" :style="{ backgroundColor: item.color }"></span>
+                  <span class="h-2.5 w-5 rounded-full" :style="{ backgroundColor: item.color, opacity: item.opacity || 1 }"></span>
                   {{ item.label }}
                 </span>
               </div>
+
+              <div v-if="trendMilestones.length" class="mt-4 grid gap-2 md:grid-cols-3">
+                <div
+                  v-for="milestone in trendMilestones"
+                  :key="milestone.label"
+                  class="rounded-2xl border border-care-sage/20 bg-care-mist/70 px-4 py-3"
+                >
+                  <p class="text-xs font-semibold uppercase tracking-widest text-care-sageDark">{{ milestone.label }}</p>
+                  <p class="mt-1 text-sm leading-6 text-care-ink">{{ milestone.text }}</p>
+                </div>
+              </div>
+
               <p class="mt-3 text-sm leading-6 text-slate-600">{{ trendSummary }}</p>
+              <p class="mt-2 text-xs leading-5 text-slate-500">Lines are prompts for reflection, not diagnoses. A rise or dip is a reason to pause with context, not to judge a resident or optimise a number.</p>
+            </div>
+          </div>
+
+          <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
+            <div class="mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
+              <div>
+                <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Contextual Emotion Map</p>
+                <h3 class="mt-2 text-xl font-semibold text-care-ink">Emotional moments in daily care routines</h3>
+                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                  A softer view of where emotional moments appear, shown as prompts for team reflection rather than fixed labels.
+                </p>
+              </div>
+              <div class="rounded-2xl bg-care-mist px-4 py-3 text-sm font-semibold text-care-sageDark">
+                {{ contextMapScope }}
+              </div>
+            </div>
+
+            <div class="overflow-x-auto soft-scrollbar pb-2">
+              <div class="min-w-[42rem] space-y-2">
+                <div class="grid grid-cols-[10rem_repeat(5,minmax(5.75rem,1fr))] gap-2 px-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  <span>Context</span>
+                  <span v-for="emotion in emotions" :key="emotion" class="flex min-w-0 flex-col items-center gap-1.5 text-center" :title="emotion">
+                    <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full" :style="emotionIconStyle(emotion)">
+                      <img class="block h-4 w-4" :src="emotionVisual(emotion).icon" alt="" />
+                    </span>
+                    <span class="block w-full text-[10px] font-semibold uppercase leading-tight tracking-wide text-slate-500 truncate">{{ emotion }}</span>
+                  </span>
+                </div>
+                <div
+                  v-for="row in contextEmotionMap"
+                  :key="row.label"
+                  class="grid grid-cols-[10rem_repeat(5,minmax(5.75rem,1fr))] items-stretch gap-2"
+                >
+                  <div class="rounded-2xl bg-care-mist px-4 py-3">
+                    <p class="text-sm font-semibold text-care-ink">{{ row.label }}</p>
+                    <p class="mt-1 text-xs text-slate-500">{{ row.total }} moment{{ row.total === 1 ? '' : 's' }}</p>
+                  </div>
+                  <div
+                    v-for="cell in row.cells"
+                    :key="`${row.label}-${cell.emotion}`"
+                    class="flex min-h-[4.25rem] flex-col items-center justify-center rounded-2xl border px-2 py-3 text-center transition"
+                    :style="contextCellStyle(cell.emotion, cell.count, contextMapMaxCount)"
+                  >
+                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full" :style="emotionIconStyle(cell.emotion)" aria-hidden="true">
+                      <img class="block h-[1.125rem] w-[1.125rem]" :src="emotionVisual(cell.emotion).icon" alt="" />
+                    </span>
+                    <span class="mt-1 text-sm font-semibold text-care-ink">{{ cell.count }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-5 rounded-[1.25rem] border border-care-sage/25 bg-care-mist/70 px-5 py-4">
+              <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Read this pattern with care</p>
+              <p class="mt-2 text-base leading-7 text-care-ink">{{ contextGuardrail }}</p>
             </div>
           </div>
 
@@ -649,11 +735,11 @@
         };
 
         return {
-          tabs: ['Record', 'History', 'Overview'],
+          tabs: ['Overview', 'Record', 'History'],
           activeTab: 'Overview',
           residents,
           residentProfiles,
-          selectedTrendResident: 'All residents',
+          selectedTrendResident: 'Herr Weber',
           emotions: Object.keys(promptTemplates),
           emotionEmoji: {
             'Warm connection': '😊',
@@ -662,6 +748,48 @@
             'Tearful / emotional': '💧',
             'Quietly settled': '🌿'
           },
+          emotionVisuals: {
+            'Warm connection': {
+              icon: 'assets/icons/warm-connection.svg?v=3',
+              light: '#f6e9c4',
+              mid: '#daba6a',
+              dark: '#c89a2e',
+              iconColor: '#8c6c20',
+              score: 1.2
+            },
+            'Withdrawn / low': {
+              icon: 'assets/icons/withdrawn-low.svg?v=3',
+              light: '#dceaf3',
+              mid: '#8ca9bc',
+              dark: '#567d98',
+              iconColor: '#3c586a',
+              score: -0.8
+            },
+            'Agitated / restless': {
+              icon: 'assets/icons/agitated-restless.svg?v=3',
+              light: '#f1d2c4',
+              mid: '#cf8c78',
+              dark: '#b85d45',
+              iconColor: '#814130',
+              score: -1.3
+            },
+            'Tearful / emotional': {
+              icon: 'assets/icons/tearful-emotional.svg?v=3',
+              light: '#e4e7f4',
+              mid: '#a1a7c6',
+              dark: '#747da8',
+              iconColor: '#515876',
+              score: -1.0
+            },
+            'Quietly settled': {
+              icon: 'assets/icons/quietly-settled.svg?v=3',
+              light: '#dcebe2',
+              mid: '#91b19e',
+              dark: '#5f8b70',
+              iconColor: '#43614e',
+              score: 0.8
+            }
+          },
           smartTagRules: [
             { emotion: 'Warm connection', keywords: ['smile', 'held hand', 'laughed', 'reached out', 'warm', 'kiss'] },
             { emotion: 'Withdrawn / low', keywords: ['quiet', 'silent', 'no response', 'wouldn’t eat', "wouldn't eat", 'stayed in bed'] },
@@ -669,10 +797,19 @@
             { emotion: 'Tearful / emotional', keywords: ['tears', 'crying', 'upset', 'sobbing', 'weep'] },
             { emotion: 'Quietly settled', keywords: ['calm', 'peaceful', 'sat together', 'watched', 'relaxed'] }
           ],
+          contextRules: [
+            { label: 'Garden time', keywords: ['garden', 'herb', 'basil', 'birds', 'sun'] },
+            { label: 'Dining / meals', keywords: ['breakfast', 'lunch', 'tea', 'dining', 'soup', 'cook', 'table'] },
+            { label: 'Music & memory', keywords: ['music', 'song', 'opera', 'sang', 'hummed', 'photo', 'album', 'memory', 'story', 'postcards'] },
+            { label: 'Handover / routine', keywords: ['handover', 'routine', 'visitor', 'bus', 'front door', 'locked door', 'corridor', 'dusk'] },
+            { label: 'Quiet room / window', keywords: ['room', 'window', 'bed', 'doorway', 'alone', 'chair'] }
+          ],
           promptTemplates,
           emotionChart: null,
           residentChart: null,
           trendChart: null,
+          chartRenderFrame: null,
+          chartRenderRequestId: 0,
           historyFilter: 'Signora Rossi',
           historyDateFrom: '2026-05-06',
           historyDateTo: '2026-05-19',
@@ -691,29 +828,29 @@
           },
           emotionStyles: {
             'Warm connection': {
-              idle: 'border-[#dbe8df] bg-[#f4f8f5] text-[#426d55] hover:border-[#8fb5a1]',
-              selected: 'border-[#4f7f68] bg-[#dfece5] text-[#2f5645] shadow-sm',
-              badge: 'bg-[#dfece5] text-[#2f5645]'
+              idle: 'border-[#ead2bd] bg-[#fbf2ea] text-[#8a4f2f] hover:border-[#b66a3c]',
+              selected: 'border-[#b66a3c] bg-[#f4dcc5] text-[#713f25] shadow-sm',
+              badge: 'bg-[#f4dcc5] text-[#713f25]'
             },
             'Withdrawn / low': {
-              idle: 'border-[#d7e3ef] bg-[#f2f6fa] text-[#4f6f8d] hover:border-[#7d9dbb]',
-              selected: 'border-[#637f9a] bg-[#dfe9f2] text-[#3f5e7b] shadow-sm',
-              badge: 'bg-[#dfe9f2] text-[#3f5e7b]'
+              idle: 'border-[#cbdde8] bg-[#f2f7fa] text-[#496b82] hover:border-[#567d98]',
+              selected: 'border-[#567d98] bg-[#dceaf3] text-[#365b72] shadow-sm',
+              badge: 'bg-[#dceaf3] text-[#365b72]'
             },
             'Agitated / restless': {
-              idle: 'border-[#eadfd1] bg-[#f8f3ed] text-[#84613d] hover:border-[#c8aa83]',
-              selected: 'border-[#a97f4f] bg-[#efe2d0] text-[#6f4b25] shadow-sm',
-              badge: 'bg-[#efe2d0] text-[#6f4b25]'
+              idle: 'border-[#e8c9bd] bg-[#fbf0eb] text-[#8d4634] hover:border-[#b85d45]',
+              selected: 'border-[#b85d45] bg-[#f1d2c4] text-[#743322] shadow-sm',
+              badge: 'bg-[#f1d2c4] text-[#743322]'
             },
             'Tearful / emotional': {
-              idle: 'border-[#e7d7de] bg-[#f8f1f4] text-[#875a6d] hover:border-[#c69aa9]',
-              selected: 'border-[#ad7187] bg-[#f0dfe6] text-[#723f54] shadow-sm',
-              badge: 'bg-[#f0dfe6] text-[#723f54]'
+              idle: 'border-[#d6daeb] bg-[#f4f5fb] text-[#60698f] hover:border-[#747da8]',
+              selected: 'border-[#747da8] bg-[#e4e7f4] text-[#4d557d] shadow-sm',
+              badge: 'bg-[#e4e7f4] text-[#4d557d]'
             },
             'Quietly settled': {
-              idle: 'border-[#d7e5e5] bg-[#f0f7f7] text-[#437273] hover:border-[#6aa6a5]',
-              selected: 'border-[#4b8c8c] bg-[#dceeee] text-[#285b5b] shadow-sm',
-              badge: 'bg-[#dceeee] text-[#285b5b]'
+              idle: 'border-[#cddfd4] bg-[#f2f8f4] text-[#4f765e] hover:border-[#5f8b70]',
+              selected: 'border-[#5f8b70] bg-[#dcebe2] text-[#3d654c] shadow-sm',
+              badge: 'bg-[#dcebe2] text-[#3d654c]'
             }
           },
           moments: [
@@ -1250,10 +1387,24 @@
       },
       computed: {
         filteredMoments() {
-          const source = this.historyFilter === 'All'
-            ? this.moments
-            : this.moments.filter(moment => moment.resident === this.historyFilter);
-          return [...source].sort((a, b) => b.id - a.id);
+          const from = this.historyDateFrom ? new Date(`${this.historyDateFrom}T00:00`) : null;
+          const to = this.historyDateTo ? new Date(`${this.historyDateTo}T23:59`) : null;
+
+          return this.moments
+            .filter(moment => this.historyFilter === 'All' || moment.resident === this.historyFilter)
+            .filter(moment => {
+              const momentDate = this.parseMomentDate(moment);
+              return (!from || momentDate >= from) && (!to || momentDate <= to);
+            })
+            .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+        },
+        historyEmptyTitle() {
+          return this.moments.length === 0 ? 'No moments recorded yet.' : 'No moments match this filter.';
+        },
+        historyEmptyMessage() {
+          return this.moments.length === 0
+            ? 'Your first reflection is just a click away.'
+            : 'Try changing the resident or date range.';
         },
         totalHistoryPages() {
           return Math.ceil(this.filteredMoments.length / this.pageSize) || 1;
@@ -1282,7 +1433,7 @@
               top: '#4f7f68'
             };
           }
-          return this.residentProfiles[this.selectedTrendResident];
+          return this.residentProfiles[this.selectedTrendResident] || this.residentProfiles[this.residents[0]];
         },
         latestTrendMoment() {
           return [...this.selectedTrendMoments].sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0] || null;
@@ -1369,6 +1520,53 @@
 
           return `${this.historyFilter}'s recent moments appear balanced. Keep noticing the small things.`;
         },
+        contextMapMoments() {
+          return this.selectedTrendResident === 'All residents'
+            ? this.lastNDaysMoments(7)
+            : this.lastNDaysMoments(7).filter(moment => moment.resident === this.selectedTrendResident);
+        },
+        contextMapScope() {
+          return this.selectedTrendResident === 'All residents' ? 'Whole home · last 7 days' : `${this.selectedTrendResident} · last 7 days`;
+        },
+        contextEmotionMap() {
+          const labels = [
+            ...this.contextRules.map(rule => rule.label),
+            'Morning rhythm',
+            'Afternoon rhythm',
+            'Evening rhythm'
+          ];
+
+          return labels
+            .map(label => {
+              const entries = this.contextMapMoments.filter(moment => this.contextForMoment(moment) === label);
+              const cells = this.emotions.map(emotion => ({
+                emotion,
+                count: entries.filter(moment => moment.emotion === emotion).length
+              }));
+              return {
+                label,
+                total: entries.length,
+                cells
+              };
+            })
+            .filter(row => row.total > 0);
+        },
+        contextMapMaxCount() {
+          return Math.max(1, ...this.contextEmotionMap.flatMap(row => row.cells.map(cell => cell.count)));
+        },
+        contextGuardrail() {
+          const cells = this.contextEmotionMap.flatMap(row => row.cells.map(cell => ({ ...cell, context: row.label })));
+          const strongest = cells.sort((a, b) => b.count - a.count)[0];
+          if (!strongest || strongest.count === 0) {
+            return 'These patterns are conversation starters, not conclusions. They can support handover reflection, but should always be read alongside staff knowledge, resident preferences, and the care environment.';
+          }
+
+          const phrase = strongest.emotion === 'Agitated / restless'
+            ? `Restless moments appear more often around ${strongest.context.toLowerCase()}`
+            : `${strongest.emotion.toLowerCase()} moments appear more often around ${strongest.context.toLowerCase()}`;
+
+          return `${phrase}. This may be useful for shift discussion, but it should not be read as a fixed trait of any resident. Context, environment, and staff knowledge still matter.`;
+        },
         gentleHighlights() {
           return this.residents
             .map(resident => {
@@ -1383,12 +1581,45 @@
         },
         trendLegend() {
           return [
-            { label: 'Warm connection', color: '#4f7f68' },
-            { label: 'Quietly settled', color: '#8fb5a1' },
-            { label: 'Tearful / emotional', color: '#c69aa9' },
-            { label: 'Withdrawn / low', color: '#7d9dbb' },
-            { label: 'Agitated / restless', color: '#c8aa83' }
+            { label: 'Overall tone', color: '#4f7f68' },
+            ...this.emotions.map(emotion => ({
+              label: emotion,
+              color: this.emotionVisual(emotion).mid,
+              opacity: 0.55
+            }))
           ];
+        },
+        trendMilestones() {
+          const trend = this.trendSeries().filter(point => point.total > 0 && point.toneScore !== null);
+          if (!trend.length) return [];
+
+          const highest = [...trend].sort((a, b) => b.toneScore - a.toneScore)[0];
+          const lowest = [...trend].sort((a, b) => a.toneScore - b.toneScore)[0];
+          const mostObserved = [...trend].sort((a, b) => b.total - a.total)[0];
+          const items = [];
+
+          if (highest) {
+            items.push({
+              label: 'Gentlest lift',
+              text: `${highest.label} leans toward ${highest.dominantEmotion.toLowerCase()}. What helped make those moments possible?`
+            });
+          }
+
+          if (lowest && lowest.label !== highest.label) {
+            items.push({
+              label: 'Needs context',
+              text: `${lowest.label} sits lower on the tone line. What changed in routine, place, or staffing that day?`
+            });
+          }
+
+          if (mostObserved && !items.some(item => item.text.includes(mostObserved.label))) {
+            items.push({
+              label: 'Most observed',
+              text: `${mostObserved.label} has ${mostObserved.total} recorded moment${mostObserved.total === 1 ? '' : 's'} — enough to discuss gently at handover.`
+            });
+          }
+
+          return items.slice(0, 3);
         },
         trendSummary() {
           const trend = this.trendSeries();
@@ -1405,6 +1636,16 @@
 
           const positive = warmCount + settledCount;
           const negative = lowCount + agitatedCount + tearfulCount;
+          const scoredDays = trend.filter(point => point.toneScore !== null);
+          const firstTone = scoredDays[0]?.toneScore;
+          const lastTone = scoredDays[scoredDays.length - 1]?.toneScore;
+
+          if (scoredDays.length >= 2 && lastTone - firstTone >= 0.45) {
+            return `The tone line for ${scope} lifts across the week. Use the rise as a prompt to ask what conditions supported warmer or steadier moments.`;
+          }
+          if (scoredDays.length >= 2 && firstTone - lastTone >= 0.45) {
+            return `The tone line for ${scope} becomes heavier across the week. This is not a verdict, but it may be worth discussing context at handover.`;
+          }
 
           if (negative > positive * 1.5) {
             return `This week skews towards difficult moments for ${scope} — consider raising at handover.`;
@@ -1430,23 +1671,34 @@
           deep: true,
           handler() {
             if (this.activeTab === 'Overview') {
-              this.$nextTick(this.renderCharts);
+              this.scheduleChartRender();
             }
           }
         },
         selectedTrendResident() {
           if (this.activeTab === 'Overview') {
-            this.$nextTick(this.renderCharts);
+            this.scheduleChartRender();
           }
         },
         historyFilter() {
-          this.currentHistoryPage = 1;
+          this.resetHistoryPage();
+        },
+        historyDateFrom() {
+          this.resetHistoryPage();
+        },
+        historyDateTo() {
+          this.resetHistoryPage();
+        },
+        filteredMoments() {
+          if (this.currentHistoryPage > this.totalHistoryPages) {
+            this.currentHistoryPage = this.totalHistoryPages;
+          }
         }
       },
       mounted() {
         window.addEventListener('resize', this.resizeCharts);
         if (this.activeTab === 'Overview') {
-          nextTick(() => this.renderCharts());
+          this.scheduleChartRender();
         }
       },
       beforeUnmount() {
@@ -1457,8 +1709,25 @@
         setTab(tab) {
           this.activeTab = tab;
           if (tab === 'Overview') {
-            nextTick(() => this.renderCharts());
+            this.scheduleChartRender();
+          } else {
+            this.destroyCharts();
           }
+        },
+        scheduleChartRender() {
+          const requestId = ++this.chartRenderRequestId;
+          if (this.chartRenderFrame) {
+            cancelAnimationFrame(this.chartRenderFrame);
+            this.chartRenderFrame = null;
+          }
+          this.$nextTick(() => {
+            if (requestId !== this.chartRenderRequestId || this.activeTab !== 'Overview') return;
+            this.chartRenderFrame = requestAnimationFrame(() => {
+              if (requestId !== this.chartRenderRequestId || this.activeTab !== 'Overview') return;
+              this.chartRenderFrame = null;
+              this.renderCharts();
+            });
+          });
         },
         selectEmotion(emotion) {
           this.form.emotion = emotion;
@@ -1466,6 +1735,9 @@
             this.suggestedEmotion = '';
             this.suggestionMessage = '';
           }
+        },
+        resetHistoryPage() {
+          this.currentHistoryPage = 1;
         },
         suggestEmotion() {
           const note = this.form.note.toLowerCase();
@@ -1520,10 +1792,51 @@
           }, 2400);
         },
         profileFor(resident) {
-          return this.residentProfiles[resident];
+          return this.residentProfiles[resident] || this.selectedTrendProfile;
         },
         buildPrompt(emotion, resident) {
-          return this.promptTemplates[emotion].replace('{Name}', resident);
+          const template = this.promptTemplates[emotion] || this.promptTemplates['Quietly settled'];
+          return template.replace('{Name}', resident);
+        },
+        contextForMoment(moment) {
+          const text = `${moment.note || ''} ${moment.aiPrompt || ''}`.toLowerCase();
+          const match = this.contextRules.find(rule => rule.keywords.some(keyword => text.includes(keyword)));
+          if (match) return match.label;
+
+          const hour = this.parseMomentDate(moment).getHours();
+          if (hour < 12) return 'Morning rhythm';
+          if (hour < 17) return 'Afternoon rhythm';
+          return 'Evening rhythm';
+        },
+        emotionVisual(emotion) {
+          return this.emotionVisuals[emotion] || this.emotionVisuals['Quietly settled'];
+        },
+        emotionIconStyle(emotion) {
+          const visual = this.emotionVisual(emotion);
+          return {
+            color: visual.iconColor,
+            backgroundColor: visual.light,
+            border: `1px solid ${visual.dark}33`
+          };
+        },
+        contextColor(emotion) {
+          return this.emotionVisual(emotion).dark;
+        },
+        hexToRgb(hex) {
+          const value = hex.replace('#', '');
+          return {
+            r: parseInt(value.slice(0, 2), 16),
+            g: parseInt(value.slice(2, 4), 16),
+            b: parseInt(value.slice(4, 6), 16)
+          };
+        },
+        contextCellStyle(emotion, count, maxCount) {
+          const rgb = this.hexToRgb(this.contextColor(emotion));
+          const strength = count ? 0.14 + (count / maxCount) * 0.46 : 0.04;
+          return {
+            backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${strength})`,
+            borderColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${count ? 0.34 : 0.12})`
+          };
         },
         formatTimestamp(date) {
           const pad = value => String(value).padStart(2, '0');
@@ -1562,14 +1875,7 @@
           });
         },
         emotionTone(emotion) {
-          const map = {
-            'Warm connection': 2,
-            'Quietly settled': 1,
-            'Tearful / emotional': -1,
-            'Withdrawn / low': -2,
-            'Agitated / restless': -2
-          };
-          return map[emotion] || 0;
+          return this.emotionVisual(emotion).score || 0;
         },
         trendSeries() {
           return this.trendDays().map(day => {
@@ -1578,10 +1884,19 @@
             const emotionCounts = {};
             this.emotions.forEach(e => { emotionCounts[e] = 0; });
             entries.forEach(m => { emotionCounts[m.emotion]++; });
+
+            const toneTotal = entries.reduce((sum, moment) => sum + this.emotionTone(moment.emotion), 0);
+            const toneScore = entries.length ? Number((toneTotal / entries.length).toFixed(2)) : null;
+            const dominantEmotion = this.emotions
+              .map(emotion => ({ emotion, count: emotionCounts[emotion] }))
+              .sort((a, b) => b.count - a.count)[0]?.emotion || 'No dominant emotion';
+
             return {
               label: this.dayLabel(day),
               total: entries.length,
-              emotionCounts
+              emotionCounts,
+              toneScore,
+              dominantEmotion
             };
           });
         },
@@ -1607,7 +1922,7 @@
               labels: this.emotions,
               datasets: [{
                 data: this.countsByEmotion(),
-                backgroundColor: ['#8fb5a1', '#7d9dbb', '#c8aa83', '#c69aa9', '#6aa6a5'],
+                backgroundColor: this.emotions.map(emotion => this.emotionVisual(emotion).mid),
                 borderColor: '#ffffff',
                 borderWidth: 4,
                 hoverOffset: 8
@@ -1616,6 +1931,7 @@
             options: {
               responsive: true,
               maintainAspectRatio: false,
+              animation: false,
               cutout: '62%',
               plugins: {
                 legend: {
@@ -1643,8 +1959,8 @@
               datasets: [{
                 label: 'Recorded moments',
                 data: this.countsByResident(),
-                backgroundColor: '#7d9dbb',
-                borderColor: '#637f9a',
+                backgroundColor: '#a7bcd0',
+                borderColor: '#7d9dbb',
                 borderWidth: 1,
                 borderRadius: 12,
                 maxBarThickness: 52
@@ -1653,6 +1969,7 @@
             options: {
               responsive: true,
               maintainAspectRatio: false,
+              animation: false,
               scales: {
                 x: {
                   grid: { display: false },
@@ -1679,61 +1996,113 @@
           });
 
           const trend = this.trendSeries();
-          const emotionColorMap = {
-            'Warm connection': '#4f7f68',
-            'Quietly settled': '#8fb5a1',
-            'Tearful / emotional': '#c69aa9',
-            'Withdrawn / low': '#7d9dbb',
-            'Agitated / restless': '#c8aa83'
-          };
+          const emotionColorMap = Object.fromEntries(
+            this.emotions.map(emotion => [emotion, this.emotionVisual(emotion).mid])
+          );
+          const emotionLineDatasets = this.emotions.map(emotion => ({
+            label: emotion,
+            data: trend.map(point => point.total ? Number(((point.emotionCounts[emotion] / point.total) * this.emotionTone(emotion)).toFixed(2)) : null),
+            borderColor: emotionColorMap[emotion],
+            backgroundColor: emotionColorMap[emotion],
+            borderWidth: 1.6,
+            borderDash: [4, 4],
+            pointRadius: 0,
+            pointHitRadius: 12,
+            tension: 0.36,
+            spanGaps: true,
+            order: 2
+          }));
 
           this.trendChart = new Chart(this.$refs.trendChart, {
-              type: 'bar',
-              data: {
-                labels: trend.map(point => point.label),
-                datasets: this.emotions.map((emotion, i) => ({
-                  label: emotion,
-                  data: trend.map(point => point.emotionCounts[emotion]),
-                  backgroundColor: emotionColorMap[emotion],
-                  borderColor: '#ffffff',
-                  borderWidth: 1,
-                  borderRadius: i === this.emotions.length - 1 ? 8 : 0,
-                  maxBarThickness: 48
-                }))
+            type: 'line',
+            data: {
+              labels: trend.map(point => point.label),
+              datasets: [
+                ...emotionLineDatasets,
+                {
+                  label: 'Overall tone',
+                  data: trend.map(point => point.toneScore),
+                  borderColor: '#4f7f68',
+                  backgroundColor: 'rgba(143, 181, 161, 0.18)',
+                  borderWidth: 3,
+                  fill: true,
+                  pointRadius: 4,
+                  pointHoverRadius: 6,
+                  pointBackgroundColor: '#ffffff',
+                  pointBorderColor: '#4f7f68',
+                  pointBorderWidth: 2,
+                  tension: 0.36,
+                  spanGaps: true,
+                  order: 1
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              animation: false,
+              interaction: {
+                mode: 'index',
+                intersect: false
               },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                  y: {
-                    stacked: true,
-                    beginAtZero: true,
-                    ticks: { precision: 0, stepSize: 1 },
-                    grid: { color: '#e4ecea' },
-                    title: { display: true, text: 'Recorded moments' }
+              scales: {
+                y: {
+                  min: -1.5,
+                  max: 1.5,
+                  grid: {
+                    color: (ctx) => ctx.tick.value === 0 ? '#b8c9c2' : '#e4ecea',
+                    lineWidth: (ctx) => ctx.tick.value === 0 ? 1.5 : 1
                   },
-                  x: {
-                    stacked: true,
-                    grid: { display: false }
-                  }
+                  ticks: {
+                    stepSize: 0.5,
+                    callback: value => {
+                      if (value === 1.5) return 'warmer';
+                      if (value === 0) return 'steady';
+                      if (value === -1.5) return 'heavier';
+                      return '';
+                    }
+                  },
+                  title: { display: true, text: 'Emotional tone' }
                 },
-                plugins: {
-                  legend: { display: false },
-                  tooltip: {
-                    backgroundColor: '#263532',
-                    padding: 12,
-                    cornerRadius: 12,
-                    callbacks: {
-                      label: (ctx) => `${ctx.dataset.label}: ${ctx.raw}`,
-                      footer: (items) => {
-                        const point = trend[items[0].dataIndex];
-                        return point.total === 0 ? 'No moments recorded' : `Total: ${point.total} moment${point.total > 1 ? 's' : ''}`;
-                      }
+                x: {
+                  grid: { display: false }
+                }
+              },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: '#263532',
+                  padding: 12,
+                  cornerRadius: 12,
+                  filter: (ctx) => ctx.dataset.label === 'Overall tone',
+                  callbacks: {
+                    title: (items) => {
+                      const point = trend[items[0].dataIndex];
+                      return `${point.label} · ${point.total} moment${point.total === 1 ? '' : 's'}`;
+                    },
+                    label: (ctx) => {
+                      const point = trend[ctx.dataIndex];
+                      if (point.toneScore === null) return 'No moments recorded';
+                      return `Overall tone: ${point.toneScore > 0 ? '+' : ''}${point.toneScore}`;
+                    },
+                    afterLabel: (ctx) => {
+                      const point = trend[ctx.dataIndex];
+                      if (!point.total) return 'A quiet gap in the record';
+                      return `Most visible: ${point.dominantEmotion}`;
+                    },
+                    footer: (items) => {
+                      const point = trend[items[0].dataIndex];
+                      if (!point.total) return 'No verdict — just a space to notice.';
+                      const counts = this.emotions
+                        .filter(emotion => point.emotionCounts[emotion] > 0)
+                        .map(emotion => `${emotion}: ${point.emotionCounts[emotion]}`);
+                      return counts.join(' · ');
                     }
                   }
                 }
               }
-            });
+            }
+          });
 
         },
         resizeCharts() {
@@ -1742,7 +2111,18 @@
           });
         },
         destroyCharts() {
-          [this.emotionChart, this.residentChart, this.trendChart].forEach(chart => {
+          if (this.chartRenderFrame) {
+            cancelAnimationFrame(this.chartRenderFrame);
+            this.chartRenderFrame = null;
+          }
+          const charts = new Set([this.emotionChart, this.residentChart, this.trendChart]);
+          if (typeof Chart !== 'undefined') {
+            [this.$refs.emotionChart, this.$refs.residentChart, this.$refs.trendChart].forEach(canvas => {
+              const chart = canvas ? Chart.getChart(canvas) : null;
+              if (chart) charts.add(chart);
+            });
+          }
+          charts.forEach(chart => {
             try { if (chart) chart.destroy(); } catch (e) { /* canvas already removed by Vue */ }
           });
           this.emotionChart = null;
