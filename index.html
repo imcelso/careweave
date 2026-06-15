@@ -97,9 +97,76 @@
       .chart-wrap { height: 20rem; }
       .chart-wrap.tall { height: 23rem; }
     }
+    .back-portfolio {
+      position: fixed;
+      top: 1.25rem;
+      left: 1.25rem;
+      z-index: 60;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.95rem 0.5rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      letter-spacing: 0.005em;
+      color: #5b3f96;
+      background: rgba(238, 232, 250, 0.62);
+      border: 1px solid rgba(155, 130, 200, 0.28);
+      backdrop-filter: blur(14px) saturate(140%);
+      -webkit-backdrop-filter: blur(14px) saturate(140%);
+      box-shadow:
+        0 6px 18px -10px rgba(91, 63, 150, 0.35),
+        0 1px 0 rgba(255, 255, 255, 0.6) inset;
+      opacity: 0;
+      transform: translateY(-6px);
+      pointer-events: none;
+      transition:
+        opacity 320ms cubic-bezier(0.22, 0.61, 0.36, 1),
+        transform 320ms cubic-bezier(0.22, 0.61, 0.36, 1),
+        background-color 200ms ease,
+        box-shadow 200ms ease;
+      text-decoration: none;
+    }
+    .back-portfolio.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .back-portfolio:hover {
+      background: rgba(232, 222, 248, 0.85);
+      box-shadow:
+        0 10px 26px -12px rgba(91, 63, 150, 0.45),
+        0 1px 0 rgba(255, 255, 255, 0.7) inset;
+    }
+    .back-portfolio:focus-visible {
+      outline: none;
+      box-shadow:
+        0 0 0 4px rgba(155, 130, 200, 0.28),
+        0 6px 18px -10px rgba(91, 63, 150, 0.35);
+    }
+    .back-portfolio svg {
+      transition: transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    }
+    .back-portfolio:hover svg {
+      transform: translateX(-2px);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .back-portfolio {
+        transition: opacity 120ms linear;
+        transform: none;
+      }
+      .back-portfolio.is-visible { transform: none; }
+    }
   </style>
 </head>
 <body class="min-h-screen text-care-ink antialiased">
+  <a href="https://celso.cc" id="backToPortfolio" class="back-portfolio" aria-label="Back to portfolio">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Back to portfolio
+  </a>
   <div id="app" v-cloak class="min-h-screen">
     <header class="border-b border-white/70 bg-white/70 backdrop-blur">
       <div class="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
@@ -2131,6 +2198,66 @@
         }
       }
     }).mount('#app');
+  </script>
+
+  <script>
+    // Back-to-portfolio button: shows after the user has scrolled past the
+    // top header area, hides while scrolling down (so it doesn't compete
+    // with reading), reappears on scroll-up or when near the page bottom.
+    (function () {
+      const btn = document.getElementById('backToPortfolio');
+      if (!btn) return;
+
+      const SHOW_AFTER = 140;        // px scrolled before the button is allowed to appear
+      const DOWN_HIDE_DELTA = 6;     // tiny down-scroll threshold to trigger hide
+      const UP_SHOW_DELTA = 4;       // tiny up-scroll threshold to trigger show
+      const BOTTOM_REVEAL = 200;     // px from bottom: always show
+
+      let lastY = window.scrollY;
+      let ticking = false;
+      let visible = false;
+
+      const setVisible = (next) => {
+        if (next === visible) return;
+        visible = next;
+        btn.classList.toggle('is-visible', next);
+      };
+
+      const update = () => {
+        const y = window.scrollY;
+        const docH = document.documentElement.scrollHeight;
+        const winH = window.innerHeight;
+        const nearBottom = y + winH >= docH - BOTTOM_REVEAL;
+
+        if (y < SHOW_AFTER) {
+          // Inside the hero/header area — stay hidden, don't compete with the page identity.
+          setVisible(false);
+        } else if (nearBottom) {
+          // Reached the end — user is naturally looking for an exit.
+          setVisible(true);
+        } else {
+          const dy = y - lastY;
+          if (dy > DOWN_HIDE_DELTA) {
+            setVisible(false);
+          } else if (dy < -UP_SHOW_DELTA) {
+            setVisible(true);
+          }
+        }
+
+        lastY = y;
+        ticking = false;
+      };
+
+      window.addEventListener('scroll', () => {
+        if (!ticking) {
+          window.requestAnimationFrame(update);
+          ticking = true;
+        }
+      }, { passive: true });
+
+      // Keyboard users: reveal whenever the button gets focus via Tab.
+      btn.addEventListener('focus', () => setVisible(true));
+    })();
   </script>
 </body>
 </html>
