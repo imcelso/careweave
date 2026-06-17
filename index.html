@@ -7,6 +7,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- D3 v7 powers the 24h Polar Clock (Circadian View). Loaded only on
+       this prototype page; the visualisation degrades silently if D3
+       fails to load (see renderPolarClock guard). -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -39,6 +43,170 @@
         radial-gradient(circle at top left, rgba(143, 181, 161, 0.18), transparent 32rem),
         linear-gradient(135deg, #f7f4ee 0%, #eef3f2 48%, #f4f7f8 100%);
     }
+
+    /* =====================================================================
+       TYPOGRAPHY SYSTEM — single source of truth
+       ---------------------------------------------------------------------
+       One scale governs every piece of text. Combine ONE structural class
+       (.t-display / .t-h1 / .t-h2 / .t-h3 / .t-body / .t-body-sm /
+        .t-caption / .t-micro) with optional ROLE classes (.t-kicker for
+       uppercase eyebrow labels, .t-badge for pill labels, .t-num for KPI
+       numbers, .t-meta for muted secondary text). Never set raw
+       text-xs/sm/lg/xl or font-semibold in markup — that bypasses the
+       scale and is what created the previous inconsistency.
+       ===================================================================== */
+
+    /* Display — only for hero KPI numbers (large stat blocks). */
+    .t-display { font-size: 2.25rem;  line-height: 1;     font-weight: 600; letter-spacing: -0.01em; }
+
+    /* H1 — single top-level page brand mark. */
+    .t-h1      { font-size: 1.5rem;   line-height: 2rem;  font-weight: 600; letter-spacing: 0; }
+
+    /* H2 — primary section title (one per major section / card cluster). */
+    .t-h2      { font-size: 1.5rem;   line-height: 2rem;  font-weight: 600; letter-spacing: -0.005em; }
+
+    /* H3 — subsection / card title inside a section. */
+    .t-h3      { font-size: 1.125rem; line-height: 1.6rem; font-weight: 600; letter-spacing: 0; }
+
+    /* Body / lead — long-form paragraphs, AI prompts, descriptions. */
+    .t-body    { font-size: 1rem;     line-height: 1.65;  font-weight: 400; }
+
+    /* Body small — secondary descriptions, list items, table cells. */
+    .t-body-sm { font-size: 0.875rem; line-height: 1.5;   font-weight: 400; }
+
+    /* Caption — meta info, timestamps, helper text. */
+    .t-caption { font-size: 0.8125rem; line-height: 1.45; font-weight: 400; }
+
+    /* Micro — legal, footnotes, tiny chip text. */
+    .t-micro   { font-size: 0.6875rem; line-height: 1.35; font-weight: 400; letter-spacing: 0.01em; }
+
+    /* ----- Role modifiers (compose with a structural class) ----- */
+
+    /* Kicker / eyebrow — ALL uppercase mini-labels above titles. ALWAYS
+       paired with .t-caption (never .t-body-sm/.t-micro) so the eyebrow
+       stays at one consistent size across the whole page. */
+    .t-kicker {
+      font-size: 0.75rem; line-height: 1.1; font-weight: 700;
+      letter-spacing: 0.14em; text-transform: uppercase;
+    }
+
+    /* Badge — pill chips, tags, AI-Powered marks. */
+    .t-badge {
+      font-size: 0.6875rem; line-height: 1; font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    /* Numeric stat label paired with .t-display. */
+    .t-num     { font-variant-numeric: tabular-nums; }
+
+    /* Strong inline emphasis inside .t-body / .t-body-sm. */
+    .t-strong  { font-weight: 600; }
+
+    /* Muted role — apply alongside structural class for de-emphasis. */
+    .t-muted   { color: #6b7d77; }
+    /* ===================================================================== */
+
+    /* =====================================================================
+       SPACING / RHYTHM SYSTEM — 统一的行距与间距节奏
+       ---------------------------------------------------------------------
+       配合上面的字号梯度，给"标题—正文""段落—段落""标签—值"
+       建立一组节奏值，避免某些区域偏挤、某些区域偏空。
+       命名以 4 px 为基准（0.25rem = 4 px）。在标记里直接用即可，
+       例如 class="stack-md" / class="kicker-gap" / class="rhythm-loose"。
+       ===================================================================== */
+
+    /* 节奏 token（同时暴露为 CSS 变量，方便扩展） */
+    :root {
+      --rhythm-2xs: 0.25rem;  /* 4px  —— 行内紧贴 */
+      --rhythm-xs:  0.375rem; /* 6px  —— 标签↔值 */
+      --rhythm-sm:  0.5rem;   /* 8px  —— 标签↔标题 */
+      --rhythm-md:  0.75rem;  /* 12px —— 标题↔正文（默认） */
+      --rhythm-lg:  1rem;     /* 16px —— 段落↔段落 */
+      --rhythm-xl:  1.5rem;   /* 24px —— 卡片内子区块之间 */
+      --rhythm-2xl: 2rem;     /* 32px —— 卡片之间（大节奏） */
+    }
+
+    /* 1）垂直堆叠（直接子元素之间的间距） */
+    .stack-2xs > * + * { margin-top: var(--rhythm-2xs); }
+    .stack-xs  > * + * { margin-top: var(--rhythm-xs);  }
+    .stack-sm  > * + * { margin-top: var(--rhythm-sm);  }
+    .stack-md  > * + * { margin-top: var(--rhythm-md);  }
+    .stack-lg  > * + * { margin-top: var(--rhythm-lg);  }
+    .stack-xl  > * + * { margin-top: var(--rhythm-xl);  }
+
+    /* 2）"小标签 → 标题"之间的固定缝隙 —— 之前 mt-1 / mt-2 混用，
+          统一为 8 px，避免某些卡片偏挤、某些偏空。 */
+    .kicker-gap { margin-top: var(--rhythm-sm); }
+
+    /* 3）"标题 → 正文"之间的固定缝隙 —— 默认 12 px。 */
+    .title-gap  { margin-top: var(--rhythm-md); }
+
+    /* 4）段落（连续 t-body / t-body-sm）之间的舒适距离 —— 16 px。 */
+    .t-body + .t-body,
+    .t-body-sm + .t-body-sm,
+    .t-body + .t-body-sm,
+    .t-body-sm + .t-body { margin-top: var(--rhythm-lg); }
+
+    /* 5）行距微调修饰：在长段落需要更松、KPI 数字行需要更紧时用。 */
+    .leading-tight-fix  { line-height: 1.25; }
+    .leading-relaxed-fix{ line-height: 1.75; }
+    /* ===================================================================== */
+
+    /* =====================================================================
+       PRIMARY TAB BAR (Overview / Record / History)
+       ---------------------------------------------------------------------
+       目标：三个标签视觉重量一致，icon 与文字光学对齐，active 与
+       inactive 切换时不出现位移或抖动。基准 = History 标签的尺寸。
+       ===================================================================== */
+    .tab-btn {
+      box-sizing: border-box;
+      border: 1px solid transparent; /* 抵消 active 阴影引起的 1px 偏移 */
+      /* 三个 tab 强制等宽等高：grid 列已经等宽，这里再用 width:100% 保证
+         按钮盒子撑满列；height 固定（不再依赖 min-h + padding），让
+         Overview / Record / History 三个按钮的外框完全一致，与 active /
+         inactive 状态切换无关。 */
+      width: 100%;
+      height: 2.75rem;
+      padding-top: 0;
+      padding-bottom: 0;
+      /* 内部三段式 grid：左占位 1fr + 中间 auto（icon+label）+ 右占位 1fr，
+         保证每个按钮里 icon+label 这一组合相对按钮整体严格居中，不会因
+         label 文字长度差异（Overview/Record/History）而出现视觉偏移。 */
+      display: grid !important;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+    }
+    /* 中间居中段：icon + label 用 inline-flex 排成一组，放在 grid 的第二列。 */
+    .tab-btn .tab-inner {
+      grid-column: 2;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem; /* 等同 Tailwind gap-2，按钮上的 gap-2 此时已无效 */
+    }
+    /* 统一图标"光学盒"：以 History 的占框为基准，三个 icon 都在同一
+       18×18 容器里居中渲染；overflow:visible 保证 stroke 不被裁切。 */
+    .tab-btn .tab-ico {
+      width: 18px;
+      height: 18px;
+      line-height: 0;
+    }
+    .tab-btn .tab-ico svg {
+      display: block;
+      width: 18px;
+      height: 18px;
+      overflow: visible;
+    }
+    /* 文字基线统一：禁用图标对文字的基线影响，三个标签等高对齐 */
+    .tab-btn .tab-label {
+      letter-spacing: 0.005em;
+      line-height: 1;
+      transform: translateY(0.5px); /* 视觉补偿，与 History 的实际渲染对齐 */
+    }
+    .tab-btn:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(143, 181, 161, 0.35);
+    }
+    /* ===================================================================== */
     .soft-scrollbar::-webkit-scrollbar { width: 10px; }
     .soft-scrollbar::-webkit-scrollbar-track { background: #eef3f2; border-radius: 999px; }
     .soft-scrollbar::-webkit-scrollbar-thumb { background: #b8c9c2; border-radius: 999px; }
@@ -46,6 +214,71 @@
       position: relative;
       width: 100%;
       height: 18rem;
+    }
+    /* ===== D3 Polar Clock (24h Circadian View) =====
+       Wrapper used by the SVG-based visualisation that replaces the old
+       per-resident bar chart. Tooltip is positioned relative to .d3-wrap. */
+    .d3-wrap { position: relative; width: 100%; }
+    .d3-wrap svg { display: block; width: 100%; height: 100%; overflow: visible; }
+    .polar-tick line { stroke: #c8d3ce; stroke-width: 1; }
+    .polar-tick.major line { stroke: #8fb5a1; stroke-width: 1.4; }
+    .polar-tick text { fill: #6b7d77; font-size: 10px; font-weight: 600; }
+    .polar-segment { transition: transform 220ms ease, filter 220ms ease; cursor: pointer; transform-origin: center; transform-box: fill-box; }
+    .polar-segment:hover { filter: brightness(0.9); }
+    .polar-bands path { fill: none; stroke: rgba(143,181,161,0.18); stroke-width: 1; }
+    .polar-center text.title { font-size: 11px; font-weight: 700; letter-spacing: 0.18em; fill: #4f7f68; text-transform: uppercase; }
+    .polar-center text.subtitle { font-size: 10px; fill: #6b7d77; }
+    .polar-center text.kpi { font-size: 22px; font-weight: 700; fill: #263532; }
+    .polar-center text.kpi-label { font-size: 9px; letter-spacing: 0.14em; fill: #94a39d; text-transform: uppercase; }
+    .polar-period text { font-size: 9px; font-weight: 700; letter-spacing: 0.16em; fill: #94a39d; text-transform: uppercase; }
+    .d3-tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(38, 53, 50, 0.94);
+      color: #f7f4ee;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      line-height: 1.45;
+      box-shadow: 0 10px 28px -12px rgba(38, 53, 50, 0.55);
+      transform: translate(-50%, calc(-100% - 10px));
+      opacity: 0;
+      transition: opacity 160ms ease;
+      max-width: 220px;
+      z-index: 30;
+    }
+    .d3-tooltip.is-visible { opacity: 1; }
+    /* Methodology card + demo-data chip used in the polar clock header. */
+    details.method-card { border-radius: 1rem; background: rgba(238, 243, 242, 0.6); border: 1px solid rgba(143,181,161,0.28); padding: 0.6rem 0.85rem; }
+    details.method-card[open] { background: rgba(238, 243, 242, 0.85); }
+    details.method-card > summary {
+      list-style: none; cursor: pointer;
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase; color: #4f7f68;
+    }
+    details.method-card > summary::-webkit-details-marker { display: none; }
+    details.method-card > summary::after {
+      content: "+"; margin-left: auto; font-size: 1rem; color: #4f7f68; transition: transform 200ms ease;
+    }
+    details.method-card[open] > summary::after { content: "−"; }
+    details.method-card .method-body {
+      margin-top: 0.6rem; font-size: 0.78rem; line-height: 1.6; color: #4a5b56;
+    }
+    details.method-card code {
+      background: rgba(255,255,255,0.7); padding: 0.05rem 0.35rem; border-radius: 4px;
+      font-size: 0.72rem; color: #2f4d40;
+    }
+    details.method-card .method-cite { font-size: 0.7rem; color: #7a8c85; margin-top: 0.45rem; font-style: italic; }
+    .data-mode-toggle {
+      display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem;
+      border-radius: 999px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; background: rgba(143,181,161,0.18); color: #4f7f68;
+      border: 1px solid rgba(143,181,161,0.4);
+    }
+    .data-mode-toggle .dot {
+      width: 0.5rem; height: 0.5rem; border-radius: 999px; background: #4f7f68;
+      box-shadow: 0 0 0 4px rgba(143,181,161,0.22);
     }
     .portrait-img {
       background: linear-gradient(145deg, #eef3f2, #f7f4ee);
@@ -178,15 +411,15 @@
               </svg>
             </div>
             <div>
-              <h1 class="text-2xl font-semibold tracking-normal text-care-ink">CareWeave</h1>
-              <p class="text-sm text-slate-600">Moments that matter</p>
+              <h1 class="t-h1 text-care-ink">CareWeave</h1>
+              <p class="t-caption text-slate-600">Moments that matter</p>
             </div>
           </div>
           <div class="flex flex-wrap items-center gap-3">
-            <div class="rounded-full bg-care-mist px-4 py-2 text-sm text-slate-700">
-              Current staff member <span class="font-semibold text-care-sageDark">Ana</span>
+            <div class="rounded-full bg-care-mist px-4 py-2 t-caption text-slate-700">
+              Current staff member <span class="t-strong text-care-sageDark">Ana</span>
             </div>
-            <div class="rounded-full bg-white px-4 py-2 text-sm text-slate-600 shadow-sm">
+            <div class="rounded-full bg-white px-4 py-2 t-caption text-slate-600 shadow-sm">
               Shift partner: Lars
             </div>
           </div>
@@ -226,20 +459,20 @@
       <section v-if="activeTab === 'Record'" class="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]">
         <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-7">
           <div class="mb-6 flex flex-col gap-2">
-            <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Quick Capture</p>
-            <h2 class="text-2xl font-semibold text-care-ink">Record a moment</h2>
-            <p class="max-w-2xl text-base leading-7 text-slate-600">
+            <p class="t-kicker text-care-sageDark">Quick Capture</p>
+            <h2 class="kicker-gap t-h2 text-care-ink">Record a moment</h2>
+            <p class="title-gap max-w-2xl t-body text-slate-600">
               A short note from morning tea, garden time, a reminiscence group, or handover can be enough.
             </p>
           </div>
 
           <form class="space-y-6" @submit.prevent="saveMoment">
             <div>
-              <label for="resident" class="mb-2 block text-sm font-semibold text-slate-700">Resident</label>
+              <label for="resident" class="mb-2 block t-body-sm t-strong text-slate-700">Resident</label>
               <select
                 id="resident"
                 v-model="form.resident"
-                class="w-full rounded-2xl border border-care-sageDark/35 bg-care-cream px-4 py-3 text-base text-care-ink outline-none transition focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
+                class="w-full rounded-2xl border border-care-sageDark/35 bg-care-cream px-4 py-3 t-body text-care-ink outline-none transition focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
               >
                 <option value="">Select a resident</option>
                 <option v-for="resident in residents" :key="resident" :value="resident">{{ resident }}</option>
@@ -248,54 +481,54 @@
 
             <div>
               <fieldset>
-                <legend class="mb-3 block text-sm font-semibold text-slate-700">Emotion tag</legend>
+                <legend class="mb-3 block t-body-sm t-strong text-slate-700">Emotion tag</legend>
                 <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   <button
                     v-for="emotion in emotions"
                     :key="emotion"
                     type="button"
-                    class="min-h-[3.25rem] rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition"
+                    class="min-h-[3.25rem] rounded-2xl border px-4 py-3 text-left t-body-sm t-strong transition"
                     :class="[form.emotion === emotion ? emotionStyles[emotion].selected : emotionStyles[emotion].idle, suggestedEmotion === emotion && form.emotion !== emotion ? 'ring-4 ring-emerald-200 shadow-[0_0_0_4px_rgba(143,181,161,0.22)]' : '']"
                     @click="selectEmotion(emotion)"
                   >
                     <span class="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full" :style="emotionIconStyle(emotion)" aria-hidden="true">
                       <img class="block h-3.5 w-3.5" :src="emotionVisual(emotion).icon" alt="" />
                     </span>{{ emotion }}
-                    <span v-if="suggestedEmotion === emotion && form.emotion !== emotion" class="mt-1 block text-xs font-semibold text-care-sageDark">✨ Suggested</span>
+                    <span v-if="suggestedEmotion === emotion && form.emotion !== emotion" class="mt-1 block t-micro t-strong text-care-sageDark">✨ Suggested</span>
                   </button>
                 </div>
               </fieldset>
             </div>
 
             <div>
-              <label for="note" class="mb-2 block text-sm font-semibold text-slate-700">Brief note</label>
+              <label for="note" class="mb-2 block t-body-sm t-strong text-slate-700">Brief note</label>
               <textarea
                 id="note"
                 v-model.trim="form.note"
                 rows="5"
                 placeholder="What happened? (optional, 1-2 sentences)"
-                class="w-full resize-none rounded-2xl border border-care-sageDark/35 bg-care-cream px-4 py-3 text-base leading-7 text-care-ink outline-none transition placeholder:text-[#b8a084] focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
+                class="w-full resize-none rounded-2xl border border-care-sageDark/35 bg-care-cream px-4 py-3 t-body text-care-ink outline-none transition placeholder:text-[#b8a084] focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
               ></textarea>
               <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <button
                   type="button"
-                  class="inline-flex w-fit items-center justify-center rounded-full bg-care-mist px-4 py-2 text-sm font-semibold text-care-sageDark transition hover:bg-[#dfece5]"
+                  class="inline-flex w-fit items-center justify-center rounded-full bg-care-mist px-4 py-2 t-body-sm t-strong text-care-sageDark transition hover:bg-[#dfece5]"
                   @click="suggestEmotion"
                 >
                   AI Smart Tag: suggest emotion
-                  <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span>
+                  <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 t-badge text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span>
                 </button>
-                <p v-if="suggestionMessage" class="text-sm font-medium text-slate-600">{{ suggestionMessage }}</p>
+                <p v-if="suggestionMessage" class="t-body-sm text-slate-600">{{ suggestionMessage }}</p>
               </div>
             </div>
 
-            <div v-if="formError" class="rounded-2xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
+            <div v-if="formError" class="rounded-2xl bg-rose-50 px-4 py-3 t-body-sm text-rose-700">
               {{ formError }}
             </div>
 
             <button
               type="submit"
-              class="inline-flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-2xl bg-care-sageDark px-5 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-[#416d59] focus:outline-none focus:ring-4 focus:ring-care-sage/35 sm:w-auto"
+              class="inline-flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-2xl bg-care-sageDark px-5 py-3 t-body t-strong text-white shadow-sm transition hover:bg-[#416d59] focus:outline-none focus:ring-4 focus:ring-care-sage/35 sm:w-auto"
             >
               <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M5 12.5 10 17 19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -307,12 +540,12 @@
 
         <aside class="space-y-6">
           <div class="rounded-[1.5rem] bg-white/78 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
-            <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Today</p>
-            <h2 class="mt-2 text-2xl font-semibold text-care-ink">A lighter handover</h2>
-            <p class="mt-3 text-base leading-7 text-slate-600">
+            <p class="t-kicker text-care-sageDark">Today</p>
+            <h2 class="kicker-gap t-h2 text-care-ink">A lighter handover</h2>
+            <p class="title-gap t-body text-slate-600">
               Ana can capture what stood out, then bring a short reflection into shift handover without turning it into extra paperwork.
             </p>
-            <div class="mt-5 grid gap-3 text-sm text-slate-700">
+            <div class="mt-5 grid gap-3 t-body-sm text-slate-700">
               <div class="flex items-center gap-3 rounded-2xl bg-care-mist px-4 py-3">
                 <span class="h-2.5 w-2.5 rounded-full bg-care-sageDark"></span>
                 Morning tea and personal care
@@ -331,8 +564,8 @@
           <div class="rounded-[1.5rem] bg-white/82 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
             <div class="mb-4 flex items-center justify-between gap-3">
               <div>
-                <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Residents</p>
-                <h2 class="mt-2 text-xl font-semibold text-care-ink">People behind the pattern</h2>
+                <p class="t-kicker text-care-sageDark">Residents</p>
+                <h2 class="kicker-gap t-h3 text-care-ink">People behind the pattern</h2>
               </div>
               <svg class="float-soft h-12 w-12 text-care-sageDark" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                 <g fill="none">
@@ -352,8 +585,8 @@
               >
                 <img :src="profileFor(resident).photo" alt="" class="portrait-img h-12 w-12 rounded-xl" />
                 <div class="min-w-0">
-                  <p class="truncate text-sm font-semibold text-care-ink">{{ resident }}</p>
-                  <p class="truncate text-xs text-slate-600">{{ profileFor(resident).rhythm }}</p>
+                  <p class="truncate t-body-sm t-strong text-care-ink">{{ resident }}</p>
+                  <p class="truncate t-caption t-muted">{{ profileFor(resident).rhythm }}</p>
                 </div>
               </div>
             </div>
@@ -366,8 +599,8 @@
                 <span class="absolute inset-3 rounded-full bg-care-sageDark"></span>
               </div>
               <div>
-                <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">AI reflection engine <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span></p>
-                <p class="mt-1 text-base text-slate-600">listening for relational cues...</p>
+                <p class="t-kicker text-care-sageDark">AI reflection engine <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 t-badge text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span></p>
+                <p class="mt-1 t-body text-slate-600">listening for relational cues...</p>
               </div>
             </div>
           </div>
@@ -376,16 +609,16 @@
             <div class="mb-4 flex items-center gap-3">
               <img :src="profileFor(latestReflection.resident).photo" alt="" class="portrait-img h-12 w-12 rounded-2xl shadow-sm" />
               <div>
-                <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">CareWeave AI reflection <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span></p>
-                <p class="text-sm text-slate-500">{{ latestReflection.resident }} · {{ latestReflection.emotion }}</p>
+                <p class="t-kicker text-care-sageDark">CareWeave AI reflection <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 t-badge text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span></p>
+                <p class="t-caption text-slate-500">{{ latestReflection.resident }} · {{ latestReflection.emotion }}</p>
               </div>
             </div>
-            <p class="text-lg leading-8 text-care-ink">{{ latestReflection.aiPrompt }}</p>
+            <p class="t-body text-care-ink">{{ latestReflection.aiPrompt }}</p>
             <div v-if="!feedbackMessage" class="mt-6 flex flex-wrap gap-3">
-              <button type="button" class="rounded-full bg-care-sageDark px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#416d59]" @click="giveFeedback">Helpful</button>
-              <button type="button" class="rounded-full bg-care-mist px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200" @click="giveFeedback">Not quite</button>
+              <button type="button" class="rounded-full bg-care-sageDark px-4 py-2 t-body-sm t-strong text-white transition hover:bg-[#416d59]" @click="giveFeedback">Helpful</button>
+              <button type="button" class="rounded-full bg-care-mist px-4 py-2 t-body-sm t-strong text-slate-700 transition hover:bg-slate-200" @click="giveFeedback">Not quite</button>
             </div>
-            <p v-else class="mt-6 rounded-2xl bg-care-mist px-4 py-3 text-sm font-semibold text-care-sageDark">
+            <p v-else class="mt-6 rounded-2xl bg-care-mist px-4 py-3 t-body-sm t-strong text-care-sageDark">
               {{ feedbackMessage }}
             </p>
           </div>
@@ -396,31 +629,31 @@
         <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">History</p>
-              <h2 class="mt-1 text-2xl font-semibold text-care-ink">Recorded moments</h2>
+              <p class="t-kicker text-care-sageDark">History</p>
+              <h2 class="kicker-gap t-h2 text-care-ink">Recorded moments</h2>
             </div>
             <div class="flex flex-wrap items-center gap-3">
               <select
                 id="filterResident"
                 v-model="historyFilter"
-                class="rounded-2xl border border-care-sageDark/35 bg-care-cream px-4 py-3 text-base text-care-ink outline-none transition focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
+                class="rounded-2xl border border-care-sageDark/35 bg-care-cream px-4 py-3 t-body text-care-ink outline-none transition focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
               >
                 <option value="All">All residents</option>
                 <option v-for="resident in residents" :key="resident" :value="resident">{{ resident }}</option>
               </select>
-              <div class="flex items-center gap-1.5 text-sm text-slate-500">
+              <div class="flex items-center gap-1.5 t-body-sm text-slate-500">
                 <input
                   id="dateFrom"
                   type="date"
                   v-model="historyDateFrom"
-                  class="w-32 rounded-xl border border-care-sageDark/35 bg-care-cream px-3 py-3 text-sm text-care-ink outline-none transition focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
+                  class="w-32 rounded-xl border border-care-sageDark/35 bg-care-cream px-3 py-3 t-body-sm text-care-ink outline-none transition focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
                 />
                 <span class="px-1 text-slate-400">—</span>
                 <input
                   id="dateTo"
                   type="date"
                   v-model="historyDateTo"
-                  class="w-32 rounded-xl border border-care-sageDark/35 bg-care-cream px-3 py-3 text-sm text-care-ink outline-none transition focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
+                  class="w-32 rounded-xl border border-care-sageDark/35 bg-care-cream px-3 py-3 t-body-sm text-care-ink outline-none transition focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
                 />
               </div>
             </div>
@@ -431,15 +664,15 @@
           <div class="flex items-start gap-4">
             <img :src="profileFor(historyFilter).photo" alt="" class="portrait-img h-14 w-14 rounded-2xl shadow-sm" />
             <div>
-              <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">AI relationship insight <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 text-[11px] font-semibold text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span></p>
-              <p class="mt-2 text-lg leading-8 text-care-ink">{{ historyResidentInsight }}</p>
+              <p class="t-kicker text-care-sageDark">AI relationship insight <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 t-badge text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span></p>
+              <p class="mt-2 t-body text-care-ink">{{ historyResidentInsight }}</p>
             </div>
           </div>
         </div>
 
         <div v-if="filteredMoments.length === 0" class="rounded-[1.5rem] bg-white/80 p-10 text-center shadow-soft ring-1 ring-white/80">
-          <p class="text-lg font-semibold text-care-ink">{{ historyEmptyTitle }}</p>
-          <p class="mt-2 text-base text-slate-600">{{ historyEmptyMessage }}</p>
+          <p class="t-h3 text-care-ink">{{ historyEmptyTitle }}</p>
+          <p class="mt-2 t-body text-slate-600">{{ historyEmptyMessage }}</p>
         </div>
 
         <div v-else class="grid gap-4">
@@ -452,18 +685,18 @@
               <div class="flex items-center gap-4">
                 <img :src="profileFor(moment.resident).photo" alt="" class="portrait-img h-14 w-14 rounded-2xl shadow-sm" />
                 <div>
-                  <p class="text-sm font-medium text-slate-500">{{ moment.timestamp }}</p>
-                  <h3 class="mt-1 text-xl font-semibold text-care-ink">{{ moment.resident }}</h3>
+                  <p class="t-caption t-muted">{{ moment.timestamp }}</p>
+                  <h3 class="mt-1 t-h3 text-care-ink">{{ moment.resident }}</h3>
                 </div>
               </div>
-              <span class="inline-flex w-fit rounded-full px-3 py-1 text-sm font-semibold" :class="emotionStyles[moment.emotion].badge">
+              <span class="inline-flex w-fit rounded-full px-3 py-1 t-body-sm t-strong" :class="emotionStyles[moment.emotion].badge">
                 {{ moment.emotion }}
               </span>
             </div>
-            <p class="mt-4 text-base leading-7 text-slate-700">{{ moment.note || 'No brief note added.' }}</p>
+            <p class="mt-4 t-body text-slate-700">{{ moment.note || 'No brief note added.' }}</p>
             <div class="mt-4 rounded-2xl bg-care-mist px-4 py-4">
-              <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Reflection prompt</p>
-              <p class="mt-2 text-base leading-7 text-care-ink">{{ moment.aiPrompt }}</p>
+              <p class="t-kicker text-care-sageDark">Reflection prompt</p>
+              <p class="mt-2 t-body text-care-ink">{{ moment.aiPrompt }}</p>
             </div>
           </article>
         </div>
@@ -475,8 +708,8 @@
           <button type="button" class="inline-flex items-center justify-center rounded-lg p-2 text-slate-500 transition hover:bg-care-mist hover:text-care-ink disabled:opacity-30 disabled:cursor-not-allowed" :disabled="currentHistoryPage === 1" @click="currentHistoryPage--" title="Previous">
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
-          <span class="mx-3 text-sm font-semibold text-care-ink whitespace-nowrap">
-            Page {{ currentHistoryPage }} / {{ totalHistoryPages }} <span class="font-normal text-slate-500">· {{ filteredMoments.length }} records</span>
+          <span class="mx-3 t-body-sm t-strong text-care-ink whitespace-nowrap">
+            Page {{ currentHistoryPage }} / {{ totalHistoryPages }} <span class="t-muted" style="font-weight:400">· {{ filteredMoments.length }} records</span>
           </span>
           <button type="button" class="inline-flex items-center justify-center rounded-lg p-2 text-slate-500 transition hover:bg-care-mist hover:text-care-ink disabled:opacity-30 disabled:cursor-not-allowed" :disabled="currentHistoryPage === totalHistoryPages" @click="currentHistoryPage++" title="Next">
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 18 6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -489,59 +722,89 @@
 
       <section v-if="activeTab === 'Overview'" class="space-y-6">
         <div v-if="moments.length === 0" class="rounded-[1.5rem] bg-white/80 p-10 text-center shadow-soft ring-1 ring-white/80">
-          <p class="text-lg font-semibold text-care-ink">No trend data yet.</p>
-          <p class="mt-2 text-base text-slate-600">Record a few moments to see patterns with care.</p>
+          <p class="t-h3 text-care-ink">No trend data yet.</p>
+          <p class="mt-2 t-body text-slate-600">Record a few moments to see patterns with care.</p>
         </div>
 
         <div v-else class="space-y-6">
-          <div class="grid gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
-            <aside class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
-              <div class="flex items-center gap-4">
-                <img :src="selectedTrendProfile.photo" alt="" class="portrait-img h-20 w-20 rounded-[1.35rem] shadow-sm" />
-                <div>
-                  <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Smart resident focus</p>
-                  <h3 class="mt-1 text-xl font-semibold text-care-ink">{{ selectedTrendResident }}</h3>
-                  <p class="mt-1 text-sm text-slate-600">{{ selectedTrendProfile.country }}</p>
+          <div class="grid items-stretch gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
+            <aside class="flex h-full flex-col rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
+              <div class="flex items-center gap-4 rounded-2xl bg-gradient-to-br from-care-mist via-white/40 to-care-blue/15 p-3 ring-1 ring-white/80">
+                <img :src="selectedTrendProfile.photo" alt="" class="portrait-img h-20 w-20 rounded-[1.35rem] shadow-sm ring-2 ring-white" />
+                <div class="min-w-0">
+                  <p class="t-kicker text-care-sageDark">Smart resident focus</p>
+                  <h3 class="kicker-gap truncate t-h3 text-care-ink">{{ selectedTrendResident }}</h3>
+                  <p class="title-gap t-caption text-slate-600">{{ selectedTrendProfile.country }}</p>
                 </div>
               </div>
 
-              <label for="trendResident" class="mt-6 block text-sm font-semibold text-slate-700">Track resident</label>
-              <select
-                id="trendResident"
-                v-model="selectedTrendResident"
-                class="mt-2 w-full rounded-2xl border border-care-sageDark/35 bg-care-cream px-4 py-3 text-base text-care-ink outline-none transition focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
-              >
-                <option value="All residents">All residents</option>
-                <option v-for="resident in residents" :key="resident" :value="resident">{{ resident }}</option>
-              </select>
+              <div class="mt-5">
+                <label for="trendResident" class="block t-body-sm t-strong text-slate-700">Track resident</label>
+                <select
+                  id="trendResident"
+                  v-model="selectedTrendResident"
+                  class="mt-2 w-full rounded-2xl border border-care-sageDark/35 bg-care-cream px-4 py-3 t-body text-care-ink outline-none transition focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
+                >
+                  <option value="All residents">All residents</option>
+                  <option v-for="resident in residents" :key="resident" :value="resident">{{ resident }}</option>
+                </select>
+              </div>
 
-              <div class="mt-5 space-y-3 text-sm leading-6 text-slate-700">
-                <div class="rounded-2xl bg-care-mist px-4 py-3">
-                  <span class="font-semibold text-care-ink">Room or place:</span> {{ selectedTrendProfile.room }}
+              <div class="mt-5 space-y-2.5 t-body-sm text-slate-700">
+                <div class="flex items-start gap-3 rounded-2xl bg-care-mist px-4 py-3">
+                  <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white/80 text-care-sageDark ring-1 ring-care-sage/25">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M3 10l9-7 9 7"/><path d="M5 9v11h14V9"/><path d="M10 20v-6h4v6"/></svg>
+                  </span>
+                  <div class="min-w-0">
+                    <p class="t-kicker text-care-sageDark">Room or place</p>
+                    <p class="mt-0.5 t-body-sm t-strong text-care-ink">{{ selectedTrendProfile.room }}</p>
+                  </div>
                 </div>
-                <div class="rounded-2xl bg-care-mist px-4 py-3">
-                  <span class="font-semibold text-care-ink">Known rhythm:</span> {{ selectedTrendProfile.rhythm }}
+                <div class="flex items-start gap-3 rounded-2xl bg-care-mist px-4 py-3">
+                  <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white/80 text-care-sageDark ring-1 ring-care-sage/25">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                  </span>
+                  <div class="min-w-0">
+                    <p class="t-kicker text-care-sageDark">Known rhythm</p>
+                    <p class="mt-0.5 t-body-sm t-strong text-care-ink">{{ selectedTrendProfile.rhythm }}</p>
+                  </div>
                 </div>
-                <div v-if="latestTrendMoment" class="rounded-2xl bg-care-cream px-4 py-3">
-                  <span class="font-semibold text-care-ink">Latest:</span> {{ latestTrendMoment.emotion }} · {{ latestTrendMoment.timestamp }}
+                <div v-if="latestTrendMoment" class="flex items-start gap-3 rounded-2xl bg-care-cream px-4 py-3 ring-1 ring-care-sage/20">
+                  <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white/80 text-care-sageDark ring-1 ring-care-sage/25">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M5 4h14l-1 7H6L5 4z"/><path d="M5 11l1 9h12l1-9"/><path d="M9 4V2h6v2"/></svg>
+                  </span>
+                  <div class="min-w-0">
+                    <p class="t-kicker text-care-sageDark">Latest moment</p>
+                    <p class="mt-0.5 truncate t-body-sm t-strong text-care-ink">{{ latestTrendMoment.emotion }}</p>
+                    <p class="t-caption t-muted">{{ latestTrendMoment.timestamp }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-auto pt-5">
+                <div class="flex items-start gap-2.5 rounded-2xl border border-care-sage/30 bg-care-mist/70 px-4 py-3 t-caption t-muted">
+                  <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/80 text-care-sageDark ring-1 ring-care-sage/30">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                  </span>
+                  <span>Lines and chips are prompts for reflection, not diagnoses. A rise or dip is a reason to pause with context, not to judge or optimise a number.</span>
                 </div>
               </div>
             </aside>
 
-            <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
-              <div class="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-start">
+            <div class="flex h-full flex-col rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
+              <div class="flex flex-col justify-between gap-3 md:flex-row md:items-start">
                 <div>
-                  <h3 class="text-xl font-semibold text-care-ink">7-Day Emotional Tone Tracker</h3>
-                  <p class="mt-1 text-2xl font-semibold text-care-sageDark tracking-tight">{{ selectedTrendResident }}</p>
-                  <p class="mt-2 text-sm text-slate-500">{{ selectedTrendResident === 'All residents' ? 'A soft tone line across the whole home, with emotion traces kept visible in the background.' : 'A soft tone line over the past week, with emotion traces kept visible in the background.' }}</p>
+                  <p class="t-kicker text-care-sageDark">7-Day Emotional Tone Tracker</p>
+                  <h3 class="kicker-gap t-h3 text-care-ink">{{ selectedTrendResident }}</h3>
+                  <p class="title-gap t-caption t-muted">{{ selectedTrendResident === 'All residents' ? 'A soft tone line across the whole home, with emotion traces kept visible in the background.' : 'A soft tone line over the past week, with emotion traces kept visible in the background.' }}</p>
                 </div>
               </div>
-              <div class="chart-wrap tall">
+              <div class="chart-wrap tall mt-4">
                 <canvas ref="trendChart" aria-label="Seven day emotional tone trend chart"></canvas>
               </div>
 
               <div class="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 border-t border-care-sage/20 pt-4">
-                <span v-for="item in trendLegend" :key="item.label" class="inline-flex items-center gap-1.5 text-xs text-slate-500">
+                <span v-for="item in trendLegend" :key="item.label" class="inline-flex items-center gap-1.5 t-caption t-muted">
                   <span class="h-2.5 w-5 rounded-full" :style="{ backgroundColor: item.color, opacity: item.opacity || 1 }"></span>
                   {{ item.label }}
                 </span>
@@ -553,39 +816,99 @@
                   :key="milestone.label"
                   class="rounded-2xl border border-care-sage/20 bg-care-mist/70 px-4 py-3"
                 >
-                  <p class="text-xs font-semibold uppercase tracking-widest text-care-sageDark">{{ milestone.label }}</p>
-                  <p class="mt-1 text-sm leading-6 text-care-ink">{{ milestone.text }}</p>
+                  <p class="t-kicker text-care-sageDark">{{ milestone.label }}</p>
+                  <p class="mt-1 t-body-sm text-care-ink">{{ milestone.text }}</p>
                 </div>
               </div>
 
-              <p class="mt-3 text-sm leading-6 text-slate-600">{{ trendSummary }}</p>
-              <p class="mt-2 text-xs leading-5 text-slate-500">Lines are prompts for reflection, not diagnoses. A rise or dip is a reason to pause with context, not to judge a resident or optimise a number.</p>
+              <p class="mt-4 t-body-sm t-muted">{{ trendSummary }}</p>
+            </div>
+          </div>
+
+          <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
+            <div class="grid gap-5 lg:grid-cols-5">
+              <div class="flex flex-col rounded-2xl bg-care-mist/60 p-4 ring-1 ring-care-sage/20 sm:p-5 lg:col-span-3">
+                <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-care-sage/20 pb-3">
+                  <div>
+                    <p class="t-kicker text-care-sageDark">24-hour rhythm</p>
+                    <p class="mt-0.5 t-caption t-muted">Petal colour = dominant emotion · length = how often</p>
+                  </div>
+                  <p class="t-caption t-strong text-care-ink">{{ selectedTrendResident === 'All residents' ? 'Whole home' : selectedTrendResident }} · circadian view</p>
+                </div>
+                <div class="flex flex-1 items-center justify-center pt-2">
+                  <div class="d3-wrap w-full" style="height: 20rem;">
+                    <svg ref="polarChart" role="img" aria-label="24 hour polar clock showing emotional moments by time of day"></svg>
+                    <div ref="polarTooltip" class="d3-tooltip"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-3 lg:col-span-2">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <p class="t-kicker text-care-sageDark">Circadian View · 24-hour Polar Clock</p>
+                  <span class="data-mode-toggle"><span class="dot"></span>Demo data</span>
+                </div>
+                  <h3 class="kicker-gap t-h3 text-care-ink">When emotional moments appear across the day</h3>
+                  <p class="title-gap t-body-sm t-muted">Radial 30-minute bins. Petal colour = dominant emotion at that hour, length = how often it was observed.</p>
+
+                <div class="mt-1 grid gap-2.5">
+                  <div class="rounded-2xl border border-care-sage/25 bg-care-mist/60 px-4 py-3">
+                    <div class="flex items-center justify-between gap-2">
+                      <p class="t-kicker text-care-sageDark">Morning</p>
+                      <span class="rounded-full bg-white/70 px-2 py-0.5 t-badge text-care-sageDark">06 – 11</span>
+                    </div>
+                    <p class="mt-1.5 t-body-sm text-care-ink">{{ circadianPeriodSummary('morning') }}</p>
+                  </div>
+                  <div class="rounded-2xl border border-care-sage/25 bg-care-mist/60 px-4 py-3">
+                    <div class="flex items-center justify-between gap-2">
+                      <p class="t-kicker text-care-sageDark">Sundown window</p>
+                      <span class="rounded-full bg-white/70 px-2 py-0.5 t-badge text-care-sageDark">15 – 19</span>
+                    </div>
+                    <p class="mt-1.5 t-body-sm text-care-ink">{{ circadianPeriodSummary('sundown') }}</p>
+                  </div>
+                  <div class="rounded-2xl border border-care-sage/25 bg-care-mist/60 px-4 py-3">
+                    <div class="flex items-center justify-between gap-2">
+                      <p class="t-kicker text-care-sageDark">Evening &amp; night</p>
+                      <span class="rounded-full bg-white/70 px-2 py-0.5 t-badge text-care-sageDark">20 – 05</span>
+                    </div>
+                    <p class="mt-1.5 t-body-sm text-care-ink">{{ circadianPeriodSummary('evening') }}</p>
+                  </div>
+                </div>
+
+                <details class="method-card mt-auto">
+                  <summary>How this is computed</summary>
+                  <div class="method-body">
+                    Moments are bucketed into 48 half-hour bins by local timestamp. Each petal's <em>colour</em> is the dominant emotion in that bin; its <em>radial length</em> is <code>√(count)</code>, scaled against the busiest bin. Sundowning is reported for 15:00–19:00, a clinically observed time of restlessness in dementia care.
+                    <div class="method-cite">Khachiyants, Trinkle, Son &amp; Kim (2011). <em>Sundown syndrome in persons with dementia.</em> Psychiatry Investigation. · Compatible with actigraphy / HRV time-series data sources.</div>
+                  </div>
+                </details>
+              </div>
             </div>
           </div>
 
           <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
             <div class="mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
               <div>
-                <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Contextual Emotion Map</p>
-                <h3 class="mt-2 text-xl font-semibold text-care-ink">Emotional moments in daily care routines</h3>
-                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                <p class="t-kicker text-care-sageDark">Contextual Emotion Map</p>
+                <h3 class="kicker-gap t-h3 text-care-ink">Emotional moments in daily care routines</h3>
+                <p class="title-gap max-w-3xl t-body-sm t-muted">
                   A softer view of where emotional moments appear, shown as prompts for team reflection rather than fixed labels.
                 </p>
               </div>
-              <div class="rounded-2xl bg-care-mist px-4 py-3 text-sm font-semibold text-care-sageDark">
+              <div class="rounded-2xl bg-care-mist px-4 py-3 t-body-sm t-strong text-care-sageDark">
                 {{ contextMapScope }}
               </div>
             </div>
 
             <div class="overflow-x-auto soft-scrollbar pb-2">
               <div class="min-w-[42rem] space-y-2">
-                <div class="grid grid-cols-[10rem_repeat(5,minmax(5.75rem,1fr))] gap-2 px-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                <div class="grid grid-cols-[10rem_repeat(5,minmax(5.75rem,1fr))] gap-2 px-2 t-kicker text-slate-400">
                   <span>Context</span>
                   <span v-for="emotion in emotions" :key="emotion" class="flex min-w-0 flex-col items-center gap-1.5 text-center" :title="emotion">
                     <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full" :style="emotionIconStyle(emotion)">
                       <img class="block h-4 w-4" :src="emotionVisual(emotion).icon" alt="" />
                     </span>
-                    <span class="block w-full text-[10px] font-semibold uppercase leading-tight tracking-wide text-slate-500 truncate">{{ emotion }}</span>
+                    <span class="block w-full t-kicker text-slate-500 truncate">{{ emotion }}</span>
                   </span>
                 </div>
                 <div
@@ -594,8 +917,8 @@
                   class="grid grid-cols-[10rem_repeat(5,minmax(5.75rem,1fr))] items-stretch gap-2"
                 >
                   <div class="rounded-2xl bg-care-mist px-4 py-3">
-                    <p class="text-sm font-semibold text-care-ink">{{ row.label }}</p>
-                    <p class="mt-1 text-xs text-slate-500">{{ row.total }} moment{{ row.total === 1 ? '' : 's' }}</p>
+                    <p class="t-body-sm t-strong text-care-ink">{{ row.label }}</p>
+                    <p class="mt-1 t-caption t-muted">{{ row.total }} moment{{ row.total === 1 ? '' : 's' }}</p>
                   </div>
                   <div
                     v-for="cell in row.cells"
@@ -606,15 +929,15 @@
                     <span class="inline-flex h-8 w-8 items-center justify-center rounded-full" :style="emotionIconStyle(cell.emotion)" aria-hidden="true">
                       <img class="block h-[1.125rem] w-[1.125rem]" :src="emotionVisual(cell.emotion).icon" alt="" />
                     </span>
-                    <span class="mt-1 text-sm font-semibold text-care-ink">{{ cell.count }}</span>
+                    <span class="mt-1 t-body-sm t-strong text-care-ink">{{ cell.count }}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             <div class="mt-5 rounded-[1.25rem] border border-care-sage/25 bg-care-mist/70 px-5 py-4">
-              <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Read this pattern with care</p>
-              <p class="mt-2 text-base leading-7 text-care-ink">{{ contextGuardrail }}</p>
+              <p class="t-kicker text-care-sageDark">Read this pattern with care</p>
+              <p class="mt-2 t-body text-care-ink">{{ contextGuardrail }}</p>
             </div>
           </div>
 
@@ -631,67 +954,78 @@
                 </div>
                 <div>
                   <div class="flex flex-wrap items-center gap-2">
-                    <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">CareWeave AI insight</p>
-                    <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span>
+                    <p class="t-kicker text-care-sageDark">CareWeave AI insight</p>
+                    <span class="rounded-full bg-white px-3 py-1 t-badge text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span>
                   </div>
-                  <p class="mt-2 text-lg leading-8 text-care-ink">{{ overviewInsight }}</p>
+                  <p class="mt-2 t-body text-care-ink">{{ overviewInsight }}</p>
                 </div>
               </div>
-              <div class="grid min-w-[14rem] gap-2 text-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-1">
+              <div class="grid min-w-[14rem] gap-2 t-body-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-1">
                 <div class="rounded-2xl bg-white/78 px-4 py-3">
-                  <span class="font-semibold text-care-ink">Signals scanned:</span> {{ moments.length }}
+                  <span class="t-strong text-care-ink">Signals scanned:</span> {{ moments.length }}
                 </div>
                 <div class="rounded-2xl bg-white/78 px-4 py-3">
-                  <span class="font-semibold text-care-ink">Focus:</span> {{ selectedTrendResident }}
+                  <span class="t-strong text-care-ink">Focus:</span> {{ selectedTrendResident }}
                 </div>
               </div>
             </div>
           </div>
 
           <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-7">
-            <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Overview</p>
-            <h2 class="mt-2 text-2xl font-semibold text-care-ink">Emotion trends this week</h2>
-            <p class="mt-2 max-w-3xl text-base leading-7 text-slate-600">
+            <p class="t-kicker text-care-sageDark">Overview</p>
+            <h2 class="kicker-gap t-h2 text-care-ink">Emotion trends this week</h2>
+            <p class="title-gap max-w-3xl t-body text-slate-600">
               A gentle view of recent relational care moments across morning tea, garden time, reminiscence groups, and shift handovers.
             </p>
           </div>
 
-          <div class="grid gap-4 md:grid-cols-3">
-            <div class="rounded-[1.25rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80">
-              <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Positive signals</p>
-              <p class="mt-3 text-4xl font-semibold text-care-ink">{{ positiveCount }}</p>
-              <p class="mt-2 text-sm leading-6 text-slate-600">Warm connection or quietly settled moments.</p>
+          <div class="grid gap-5 lg:grid-cols-5">
+            <div class="grid gap-2.5 sm:grid-cols-3 lg:col-span-3 lg:grid-cols-1">
+              <div class="rounded-2xl bg-white/88 p-4 shadow-soft ring-1 ring-white/80 lg:flex lg:items-center lg:gap-4 lg:py-3.5">
+                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-care-sage/15 text-care-sageDark">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg>
+                </div>
+                <div class="mt-3 lg:mt-0 lg:flex lg:flex-1 lg:items-center lg:justify-between lg:gap-3">
+                  <div>
+                    <p class="t-kicker text-care-sageDark">Positive signals</p>
+                    <p class="mt-1 t-body-sm t-muted">Warm or quietly settled moments.</p>
+                  </div>
+                  <p class="mt-2 t-display t-num text-care-ink lg:mt-0">{{ positiveCount }}</p>
+                </div>
+              </div>
+              <div class="rounded-2xl bg-white/88 p-4 shadow-soft ring-1 ring-white/80 lg:flex lg:items-center lg:gap-4 lg:py-3.5">
+                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-care-blue/15 text-care-sageDark">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                </div>
+                <div class="mt-3 lg:mt-0 lg:flex lg:flex-1 lg:items-center lg:justify-between lg:gap-3">
+                  <div>
+                    <p class="t-kicker text-care-sageDark">Needs noticing</p>
+                    <p class="mt-1 t-body-sm t-muted">Low, restless, or tearful moments.</p>
+                  </div>
+                  <p class="mt-2 t-display t-num text-care-ink lg:mt-0">{{ supportCount }}</p>
+                </div>
+              </div>
+              <div class="rounded-2xl bg-white/88 p-4 shadow-soft ring-1 ring-white/80 lg:flex lg:items-center lg:gap-4 lg:py-3.5">
+                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-care-sage/15 text-care-sageDark">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                </div>
+                <div class="mt-3 lg:mt-0 lg:flex lg:flex-1 lg:items-center lg:justify-between lg:gap-3">
+                  <div>
+                    <p class="t-kicker text-care-sageDark">Most observed</p>
+                    <p class="mt-1 t-body-sm t-muted">{{ mostActiveResident.count }} moments this week.</p>
+                  </div>
+                  <p class="mt-2 t-h3 text-care-ink lg:mt-0 lg:text-right">{{ mostActiveResident.resident }}</p>
+                </div>
+              </div>
             </div>
-            <div class="rounded-[1.25rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80">
-              <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Needs noticing</p>
-              <p class="mt-3 text-4xl font-semibold text-care-ink">{{ supportCount }}</p>
-              <p class="mt-2 text-sm leading-6 text-slate-600">Low, restless, or tearful moments to bring into handover.</p>
-            </div>
-            <div class="rounded-[1.25rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80">
-              <p class="text-sm font-semibold uppercase tracking-widest text-care-sageDark">Most observed</p>
-              <p class="mt-3 text-2xl font-semibold text-care-ink">{{ mostActiveResident.resident }}</p>
-              <p class="mt-2 text-sm leading-6 text-slate-600">{{ mostActiveResident.count }} moments captured this week.</p>
-            </div>
-          </div>
 
-          <div class="grid gap-6 lg:grid-cols-2">
-            <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
-              <div class="mb-4">
-                <h3 class="text-xl font-semibold text-care-ink">Emotion Distribution This Week</h3>
-                <p class="mt-1 text-sm text-slate-600">{{ moments.length }} recorded moments</p>
+            <div class="rounded-[1.5rem] bg-white/88 p-4 shadow-soft ring-1 ring-white/80 sm:p-5 lg:col-span-2">
+              <div class="mb-3">
+                <h3 class="t-h3 text-care-ink">Emotion Distribution This Week</h3>
+                <p class="mt-1 t-caption t-muted">{{ moments.length }} recorded moments</p>
               </div>
               <div class="chart-wrap">
                 <canvas ref="emotionChart" aria-label="Emotion distribution doughnut chart"></canvas>
-              </div>
-            </div>
-
-            <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
-              <div class="mb-4">
-                <h3 class="text-xl font-semibold text-care-ink">Interactions per Resident (Last 7 Days)</h3>
-                <p class="mt-1 text-sm text-slate-600">Across all logged care moments</p>
-              </div>
-              <div class="chart-wrap">
-                <canvas ref="residentChart" aria-label="Interactions per resident bar chart"></canvas>
               </div>
             </div>
           </div>
@@ -702,7 +1036,7 @@
           <div
             v-for="highlight in gentleHighlights"
             :key="highlight"
-            class="rounded-[1.25rem] border border-care-blue/25 bg-white/82 px-5 py-4 text-base leading-7 text-care-ink shadow-sm"
+            class="rounded-[1.25rem] border border-care-blue/25 bg-white/82 px-5 py-4 t-body text-care-ink shadow-sm"
           >
             {{ highlight }}
           </div>
@@ -712,8 +1046,8 @@
 
     <footer class="mx-auto max-w-7xl px-4 pb-8 pt-6 sm:px-6 lg:px-8">
       <hr class="mb-5 border-slate-200" />
-      <p class="text-center text-[11px] text-slate-400 leading-5">
-        CareWeave is a design prototype by <strong class="text-slate-500">Yuan Liu</strong>.<br />
+      <p class="text-center t-micro t-muted">
+        CareWeave is a design prototype by <strong class="t-strong text-slate-500">Yuan Liu</strong>.<br />
         All names, profiles, and moments are fictitious. Not for clinical use. No data is collected.<br />
         Built with an awareness of the ethical sensitivity of recording emotional data in care settings.
       </p>
@@ -873,7 +1207,9 @@
           ],
           promptTemplates,
           emotionChart: null,
-          residentChart: null,
+          // Polar Clock (D3) replaces the legacy Chart.js residentChart.
+          // Tracked here so destroyCharts() can reset its state.
+          polarRendered: false,
           trendChart: null,
           chartRenderFrame: null,
           chartRenderRequestId: 0,
@@ -1973,8 +2309,188 @@
         countsByResident() {
           return this.residents.map(resident => this.moments.filter(moment => moment.resident === resident).length);
         },
+
+        // ============================================================
+        //  24-HOUR POLAR CLOCK (Circadian View) — D3
+        // ------------------------------------------------------------
+        //  Data contract: any timestamped event with an emotion tag works.
+        //  Real research data sources that fit this view: actigraphy bins,
+        //  HRV summaries, BPSD episode logs (Cohen-Mansfield Agitation
+        //  Inventory entries with timestamps), nurse-shift observations.
+        //  Bin granularity is fixed at 30 min (48 bins) — change BINS to
+        //  switch to 5-min DCM-style resolution without other code changes.
+        // ============================================================
+        polarBins() {
+          const BINS = 48; // 30-minute bins
+          const bins = Array.from({ length: BINS }, (_, i) => ({
+            index: i,
+            startMinutes: i * (1440 / BINS),
+            counts: Object.fromEntries(this.emotions.map(e => [e, 0])),
+            total: 0,
+            tone: 0
+          }));
+          const moments = this.selectedTrendMoments;
+          moments.forEach(m => {
+            const d = this.parseMomentDate(m);
+            const minutes = d.getHours() * 60 + d.getMinutes();
+            const idx = Math.min(BINS - 1, Math.floor(minutes / (1440 / BINS)));
+            bins[idx].counts[m.emotion] += 1;
+            bins[idx].total += 1;
+            bins[idx].tone += this.emotionTone(m.emotion);
+          });
+          bins.forEach(b => {
+            if (b.total) b.tone = b.tone / b.total;
+            b.dominant = this.emotions
+              .map(e => ({ e, c: b.counts[e] }))
+              .sort((a, b2) => b2.c - a.c)[0];
+          });
+          return bins;
+        },
+        renderPolarClock() {
+          if (!window.d3 || !this.$refs.polarChart) return;
+          const svgEl = this.$refs.polarChart;
+          const wrap = svgEl.parentElement;
+          const width = wrap.clientWidth || 520;
+          const height = wrap.clientHeight || 440;
+          const cx = width / 2;
+          const cy = height / 2;
+          const outerR = Math.min(width, height) / 2 - 24;
+          const innerR = outerR * 0.32;
+
+          const svg = d3.select(svgEl);
+          svg.selectAll('*').remove();
+          svg.attr('viewBox', `0 0 ${width} ${height}`);
+
+          const bins = this.polarBins();
+          const maxCount = Math.max(1, d3.max(bins, b => b.total) || 1);
+
+          // Period bands (morning / afternoon / sundown / evening)
+          const periods = [
+            { label: 'Morning', start: 6, end: 12, tone: '#dcebe2' },
+            { label: 'Afternoon', start: 12, end: 15, tone: '#eef3f2' },
+            { label: 'Sundown', start: 15, end: 19, tone: '#f1d2c4' },
+            { label: 'Evening', start: 19, end: 24, tone: '#e4e7f4' },
+            { label: 'Night', start: 0, end: 6, tone: '#dceaf3' }
+          ];
+          const angle = h => (h / 24) * Math.PI * 2 - Math.PI / 2; // 0h on top
+          const arc = d3.arc().innerRadius(innerR).outerRadius(outerR + 4);
+          const bandG = svg.append('g').attr('transform', `translate(${cx},${cy})`).attr('class', 'polar-bands-bg');
+          periods.forEach(p => {
+            bandG.append('path').attr('d', arc({
+              startAngle: angle(p.start) + Math.PI / 2,
+              endAngle: angle(p.end) + Math.PI / 2
+            })).attr('fill', p.tone).attr('opacity', 0.35);
+          });
+
+          // Concentric reference rings
+          const ringG = svg.append('g').attr('class', 'polar-bands').attr('transform', `translate(${cx},${cy})`);
+          [0.33, 0.66, 1].forEach(t => {
+            ringG.append('circle').attr('r', innerR + (outerR - innerR) * t).attr('fill', 'none').attr('stroke', 'rgba(143,181,161,0.18)');
+          });
+
+          // Hour ticks
+          const tickG = svg.append('g').attr('transform', `translate(${cx},${cy})`);
+          for (let h = 0; h < 24; h++) {
+            const a = angle(h);
+            const major = h % 6 === 0;
+            const tg = tickG.append('g').attr('class', `polar-tick ${major ? 'major' : ''}`);
+            const x1 = Math.cos(a) * (outerR + 4);
+            const y1 = Math.sin(a) * (outerR + 4);
+            const x2 = Math.cos(a) * (outerR + (major ? 14 : 8));
+            const y2 = Math.sin(a) * (outerR + (major ? 14 : 8));
+            tg.append('line').attr('x1', x1).attr('y1', y1).attr('x2', x2).attr('y2', y2);
+            if (major || h % 3 === 0) {
+              const lx = Math.cos(a) * (outerR + 26);
+              const ly = Math.sin(a) * (outerR + 26) + 3;
+              tg.append('text').attr('x', lx).attr('y', ly).attr('text-anchor', 'middle').text(`${h.toString().padStart(2, '0')}:00`);
+            }
+          }
+
+          // Petals (segments) — radial length ∝ √(count) of dominant emotion in that bin
+          const segG = svg.append('g').attr('transform', `translate(${cx},${cy})`).attr('class', 'polar-segments');
+          const tip = this.$refs.polarTooltip ? d3.select(this.$refs.polarTooltip) : null;
+          const segArc = d3.arc().innerRadius(innerR).cornerRadius(4);
+          bins.forEach(b => {
+            if (!b.total) return;
+            const startA = (b.startMinutes / 1440) * Math.PI * 2;
+            const endA = ((b.startMinutes + 1440 / 48) / 1440) * Math.PI * 2;
+            const radial = innerR + (outerR - innerR) * Math.sqrt(b.total / maxCount);
+            const v = this.emotionVisual(b.dominant.e);
+            const path = segG.append('path')
+              .attr('class', 'polar-segment')
+              .attr('d', segArc({ startAngle: startA, endAngle: endA, innerRadius: innerR, outerRadius: innerR }))
+              .attr('fill', v.mid)
+              .attr('stroke', v.dark)
+              .attr('stroke-width', 0.6)
+              .attr('opacity', 0.85)
+              .on('mouseenter', (event) => {
+                if (!tip) return;
+                const rect = wrap.getBoundingClientRect();
+                const hh = Math.floor(b.startMinutes / 60).toString().padStart(2, '0');
+                const mm = (b.startMinutes % 60).toString().padStart(2, '0');
+                const breakdown = this.emotions
+                  .filter(e => b.counts[e])
+                  .map(e => `${e}: ${b.counts[e]}`)
+                  .join('<br/>');
+                tip.classed('is-visible', true)
+                  .style('left', (event.clientX - rect.left) + 'px')
+                  .style('top', (event.clientY - rect.top) + 'px')
+                  .html(`<strong>${hh}:${mm}</strong> · ${b.total} moment${b.total === 1 ? '' : 's'}<br/>${breakdown}`);
+              })
+              .on('mousemove', (event) => {
+                if (!tip) return;
+                const rect = wrap.getBoundingClientRect();
+                tip.style('left', (event.clientX - rect.left) + 'px')
+                   .style('top', (event.clientY - rect.top) + 'px');
+              })
+              .on('mouseleave', () => { if (tip) tip.classed('is-visible', false); });
+            // Animate petal "growing" out from inner ring
+            path.transition().duration(700).delay(b.index * 12).ease(d3.easeCubicOut)
+              .attrTween('d', () => {
+                const interp = d3.interpolate(innerR, radial);
+                return t => segArc({ startAngle: startA, endAngle: endA, innerRadius: innerR, outerRadius: interp(t) });
+              });
+          });
+
+          // Center label
+          const cg = svg.append('g').attr('class', 'polar-center').attr('transform', `translate(${cx},${cy})`);
+          // 中心仅保留一个柔和的时刻识别点（轻量、不抢戏）
+          cg.append('circle').attr('r', 4).attr('fill', 'rgba(79,127,104,0.85)');
+          cg.append('circle').attr('r', 9).attr('fill', 'none').attr('stroke', 'rgba(79,127,104,0.25)').attr('stroke-width', 1);
+
+          this.polarRendered = true;
+        },
+
+        // Period summaries shown beneath the polar clock — cheap natural-language
+        // glosses derived from the same `polarBins()` aggregation. Replace with
+        // an LLM/RAG step when production data arrives.
+        circadianPeriodSummary(period) {
+          const bins = this.polarBins();
+          const ranges = {
+            morning: [6, 12],
+            sundown: [15, 19],
+            evening: [19, 24]
+          };
+          const [start, end] = ranges[period];
+          const slice = bins.filter(b => {
+            const h = b.startMinutes / 60;
+            return h >= start && h < end;
+          });
+          const total = (window.d3 && d3.sum) ? d3.sum(slice, b => b.total) : slice.reduce((s, b) => s + b.total, 0);
+          if (!total) return 'No moments captured in this window yet.';
+          const tally = Object.fromEntries(this.emotions.map(e => [e, 0]));
+          slice.forEach(b => this.emotions.forEach(e => { tally[e] += b.counts[e]; }));
+          const sorted = this.emotions.map(e => ({ e, c: tally[e] })).sort((a, b) => b.c - a.c);
+          const top = sorted[0];
+          if (!top || !top.c) return 'No moments captured in this window yet.';
+          const share = Math.round((top.c / total) * 100);
+          if (period === 'sundown' && (top.e === 'Agitated / restless' || top.e === 'Tearful / emotional')) {
+            return `${top.c}/${total} moments lean ${top.e.toLowerCase()} (${share}%) — worth checking against the sundowning literature.`;
+          }
+          return `${top.e} dominates (${top.c}/${total}, ${share}%).`;
+        },
         renderCharts() {
-          if (typeof Chart === 'undefined' || !this.$refs.emotionChart || !this.$refs.residentChart || !this.$refs.trendChart) {
+          if (typeof Chart === 'undefined' || !this.$refs.emotionChart || !this.$refs.trendChart) {
             return;
           }
           this.destroyCharts();
@@ -2019,48 +2535,11 @@
             }
           });
 
-          this.residentChart = new Chart(this.$refs.residentChart, {
-            type: 'bar',
-            data: {
-              labels: this.residents,
-              datasets: [{
-                label: 'Recorded moments',
-                data: this.countsByResident(),
-                backgroundColor: '#a7bcd0',
-                borderColor: '#7d9dbb',
-                borderWidth: 1,
-                borderRadius: 12,
-                maxBarThickness: 52
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              animation: false,
-              scales: {
-                x: {
-                  grid: { display: false },
-                  ticks: { maxRotation: 25, minRotation: 0 }
-                },
-                y: {
-                  beginAtZero: true,
-                  ticks: {
-                    precision: 0,
-                    stepSize: 1
-                  },
-                  grid: { color: '#e4ecea' }
-                }
-              },
-              plugins: {
-                legend: { display: false },
-                tooltip: {
-                  backgroundColor: '#263532',
-                  padding: 12,
-                  cornerRadius: 12
-                }
-              }
-            }
-          });
+          // ===== D3 24h Polar Clock (Circadian View) =====
+          // Replaces the previous "Interactions per Resident" bar chart.
+          // Renders into this.$refs.polarChart (<svg>); falls through
+          // silently when D3 is missing or the ref is not yet mounted.
+          this.renderPolarClock();
 
           const trend = this.trendSeries();
           const emotionColorMap = Object.fromEntries(
@@ -2173,18 +2652,21 @@
 
         },
         resizeCharts() {
-          [this.emotionChart, this.residentChart, this.trendChart].forEach(chart => {
+          [this.emotionChart, this.trendChart].forEach(chart => {
             try { if (chart) chart.resize(); } catch (e) { /* ignore */ }
           });
+          // The polar clock is SVG-based — re-render so the geometry adapts
+          // to the new container width / height.
+          try { this.renderPolarClock(); } catch (e) { /* ignore */ }
         },
         destroyCharts() {
           if (this.chartRenderFrame) {
             cancelAnimationFrame(this.chartRenderFrame);
             this.chartRenderFrame = null;
           }
-          const charts = new Set([this.emotionChart, this.residentChart, this.trendChart]);
+          const charts = new Set([this.emotionChart, this.trendChart]);
           if (typeof Chart !== 'undefined') {
-            [this.$refs.emotionChart, this.$refs.residentChart, this.$refs.trendChart].forEach(canvas => {
+            [this.$refs.emotionChart, this.$refs.trendChart].forEach(canvas => {
               const chart = canvas ? Chart.getChart(canvas) : null;
               if (chart) charts.add(chart);
             });
@@ -2193,8 +2675,12 @@
             try { if (chart) chart.destroy(); } catch (e) { /* canvas already removed by Vue */ }
           });
           this.emotionChart = null;
-          this.residentChart = null;
           this.trendChart = null;
+          // Clear any rendered polar clock so the next renderCharts() starts fresh.
+          if (window.d3 && this.$refs.polarChart) {
+            try { d3.select(this.$refs.polarChart).selectAll('*').remove(); } catch (e) { /* ignore */ }
+          }
+          this.polarRendered = false;
         }
       }
     }).mount('#app');
