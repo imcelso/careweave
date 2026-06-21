@@ -4,13 +4,26 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CareWeave - Moments that matter</title>
+  <!--
+    [Perf] Vue / Chart.js / D3 are loaded with `defer` so they don't block
+    HTML parsing and execute in document order after the DOM is ready.
+    Tailwind's runtime JIT (cdn.tailwindcss.com) is intentionally kept
+    SYNCHRONOUS (no `defer`): it must be initialised before the inline
+    `tailwind.config = {...}` block below runs, otherwise the custom
+    `care.*` colours and `shadow-soft` would not be registered and the
+    card shadows / brand colours would silently disappear. We also keep
+    the CDN here (instead of the CLI build) so the page can be hosted on
+    GitHub Pages with zero build step.
+    Vue is loaded as the production build (`vue.global.prod.js`) — strips dev
+    warnings and patches, smaller and faster at runtime than `vue.global.js`.
+  -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
   <!-- D3 v7 powers the 24h Polar Clock (Circadian View). Loaded only on
        this prototype page; the visualisation degrades silently if D3
        fails to load (see renderPolarClock guard). -->
-  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7" defer></script>
   <script>
     tailwind.config = {
       theme: {
@@ -331,80 +344,157 @@
       .chart-wrap.tall { height: 23rem; }
     }
     .back-portfolio {
-      position: fixed;
-      top: 1.25rem;
-      left: 1.25rem;
-      z-index: 60;
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem 0.95rem 0.5rem 0.7rem;
+      gap: 0.4rem;
+      padding: 0.45rem 0.85rem 0.45rem 0.7rem;
       border-radius: 999px;
       font-size: 0.8125rem;
       font-weight: 600;
       letter-spacing: 0.005em;
-      color: #5b3f96;
-      background: rgba(238, 232, 250, 0.62);
-      border: 1px solid rgba(155, 130, 200, 0.28);
-      backdrop-filter: blur(14px) saturate(140%);
-      -webkit-backdrop-filter: blur(14px) saturate(140%);
-      box-shadow:
-        0 6px 18px -10px rgba(91, 63, 150, 0.35),
-        0 1px 0 rgba(255, 255, 255, 0.6) inset;
-      opacity: 0;
-      transform: translateY(-6px);
-      pointer-events: none;
+      color: #4f7f68;
+      background: rgba(143, 181, 161, 0.14);
+      border: 1px solid rgba(143, 181, 161, 0.32);
       transition:
-        opacity 320ms cubic-bezier(0.22, 0.61, 0.36, 1),
-        transform 320ms cubic-bezier(0.22, 0.61, 0.36, 1),
         background-color 200ms ease,
-        box-shadow 200ms ease;
+        border-color 200ms ease,
+        color 200ms ease;
       text-decoration: none;
-    }
-    .back-portfolio.is-visible {
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
+      white-space: nowrap;
     }
     .back-portfolio:hover {
-      background: rgba(232, 222, 248, 0.85);
-      box-shadow:
-        0 10px 26px -12px rgba(91, 63, 150, 0.45),
-        0 1px 0 rgba(255, 255, 255, 0.7) inset;
+      background: rgba(143, 181, 161, 0.24);
+      border-color: rgba(143, 181, 161, 0.5);
+      color: #3f6b56;
     }
     .back-portfolio:focus-visible {
       outline: none;
-      box-shadow:
-        0 0 0 4px rgba(155, 130, 200, 0.28),
-        0 6px 18px -10px rgba(91, 63, 150, 0.35);
+      box-shadow: 0 0 0 4px rgba(143, 181, 161, 0.28);
     }
     .back-portfolio svg {
+      flex-shrink: 0;
       transition: transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
     }
     .back-portfolio:hover svg {
       transform: translateX(-2px);
     }
-    @media (prefers-reduced-motion: reduce) {
-      .back-portfolio {
-        transition: opacity 120ms linear;
-        transform: none;
+    @media (max-width: 380px) {
+      .back-portfolio__label { display: none; }
+      .back-portfolio { padding: 0.45rem 0.55rem; }
+    }
+
+    /* ============================================================
+       History 页筛选控件：人名下拉框 + 两个日期框
+       彻底重写，不再依赖工具类拼凑。用统一的 grid 行 +
+       固定高度的控件，保证三框在桌面端严格对齐在同一水平线。
+       ============================================================ */
+    .history-toolbar {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 100%;
+    }
+    .history-filters {
+      display: grid;
+      grid-template-columns: 1fr;        /* 移动端：每个控件独占一行 */
+      gap: 0.75rem;
+      width: 100%;
+    }
+    /* 统一控件外观：彻底覆盖浏览器对 select / input[date] 的默认渲染 */
+    .history-filters .control {
+      -webkit-appearance: none;
+      appearance: none;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      height: 3rem;                      /* 三框完全相同的高度 */
+      margin: 0;
+      padding: 0 1rem;
+      border: 1px solid rgba(122, 140, 133, 0.35);
+      border-radius: 1rem;
+      background-color: var(--care-cream, #f7f4ec);
+      font-family: inherit;
+      font-size: 0.95rem;
+      line-height: 1.2;
+      color: var(--care-ink, #2f3a36);
+      outline: none;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .history-filters .control:focus {
+      border-color: #6c8079;
+      box-shadow: 0 0 0 4px rgba(140, 162, 152, 0.2);
+    }
+    /* 下拉框：自绘箭头，避免默认箭头改变高度/对齐 */
+    .history-filters select.control {
+      padding-right: 2.5rem;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237a8c85' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+    }
+    /* 日期框：使用独立类，保留浏览器原生外观（含原生日历图标）。
+       只统一高度 / 内边距 / 圆角，绝不使用 appearance:none，
+       否则 WebKit 会把日历选择图标一起隐藏掉。 */
+    .history-filters .date-control {
+      box-sizing: border-box;
+      height: 3rem;
+      margin: 0;
+      padding: 0 0.85rem;
+      border: 1px solid rgba(122, 140, 133, 0.35);
+      border-radius: 1rem;
+      background-color: var(--care-cream, #f7f4ec);
+      font-family: inherit;
+      font-size: 0.95rem;
+      color: var(--care-ink, #2f3a36);
+      outline: none;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .history-filters .date-control:focus {
+      border-color: #6c8079;
+      box-shadow: 0 0 0 4px rgba(140, 162, 152, 0.2);
+    }
+    .history-filters .date-control::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      opacity: 0.6;
+    }
+    .history-filters .date-control::-webkit-calendar-picker-indicator:hover {
+      opacity: 0.9;
+    }
+    .history-filters .dash {
+      display: none;                     /* 移动端隐藏分隔符 */
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+    }
+    /* 桌面端：三框一行排布，垂直居中对齐在同一水平线 */
+    @media (min-width: 640px) {
+      .history-toolbar {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
       }
-      .back-portfolio.is-visible { transform: none; }
+      .history-filters {
+        grid-template-columns: auto 9rem auto 9rem; /* 人名 | 起始日期 | — | 结束日期 */
+        align-items: center;
+        width: auto;
+      }
+      .history-filters select.control { min-width: 11rem; }
+      .history-filters .dash { display: flex; }
     }
   </style>
 </head>
 <body class="min-h-screen text-care-ink antialiased">
-  <a href="https://celso.cc" id="backToPortfolio" class="back-portfolio" aria-label="Back to portfolio">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    Back to portfolio
-  </a>
   <div id="app" v-cloak class="min-h-screen">
     <header class="border-b border-white/70 bg-white/70 backdrop-blur">
       <div class="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
         <div class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div class="flex items-center gap-3">
+            <a href="https://celso.cc" class="back-portfolio" aria-label="Back to portfolio">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span class="back-portfolio__label">Back to portfolio</span>
+            </a>
+            <span class="hidden h-7 w-px bg-care-sageDark/15 sm:block" aria-hidden="true"></span>
             <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-care-sageDark text-white shadow-soft">
               <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M12 20s-7-4.35-7-10.15A4.32 4.32 0 0 1 9.36 5.5c1.2 0 2.22.57 2.64 1.28.42-.71 1.44-1.28 2.64-1.28A4.32 4.32 0 0 1 19 9.85C19 15.65 12 20 12 20Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
@@ -627,35 +717,19 @@
 
       <section v-if="activeTab === 'History'" class="space-y-6">
         <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
-          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="history-toolbar">
             <div>
               <p class="t-kicker text-care-sageDark">History</p>
               <h2 class="kicker-gap t-h2 text-care-ink">Recorded moments</h2>
             </div>
-            <div class="flex flex-wrap items-center gap-3">
-              <select
-                id="filterResident"
-                v-model="historyFilter"
-                class="rounded-2xl border border-care-sageDark/35 bg-care-cream px-4 py-3 t-body text-care-ink outline-none transition focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
-              >
+            <div class="history-filters">
+              <select id="filterResident" v-model="historyFilter" class="control">
                 <option value="All">All residents</option>
                 <option v-for="resident in residents" :key="resident" :value="resident">{{ resident }}</option>
               </select>
-              <div class="flex items-center gap-1.5 t-body-sm text-slate-500">
-                <input
-                  id="dateFrom"
-                  type="date"
-                  v-model="historyDateFrom"
-                  class="w-32 rounded-xl border border-care-sageDark/35 bg-care-cream px-3 py-3 t-body-sm text-care-ink outline-none transition focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
-                />
-                <span class="px-1 text-slate-400">—</span>
-                <input
-                  id="dateTo"
-                  type="date"
-                  v-model="historyDateTo"
-                  class="w-32 rounded-xl border border-care-sageDark/35 bg-care-cream px-3 py-3 t-body-sm text-care-ink outline-none transition focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
-                />
-              </div>
+              <input id="dateFrom" type="date" v-model="historyDateFrom" class="date-control" />
+              <span class="dash">—</span>
+              <input id="dateTo" type="date" v-model="historyDateTo" class="date-control" />
             </div>
           </div>
         </div>
@@ -1055,6 +1129,11 @@
   </div>
 
   <script>
+    // [Perf] All CDN libs above are loaded with `defer`, so they only become
+    // available after DOMContentLoaded. We therefore boot the Vue app inside
+    // a DOMContentLoaded listener — running this synchronously would crash
+    // because `Vue` is not yet defined at inline-script execution time.
+    document.addEventListener('DOMContentLoaded', () => {
     const { createApp, nextTick } = Vue;
 
     createApp({
@@ -1789,6 +1868,46 @@
         };
       },
       computed: {
+        // [Perf] `trendSeries` was a method called from at least three
+        // places (`trendMilestones`, `trendSummary`, `renderCharts`) and
+        // every call rebuilt the same 7-day aggregation from scratch.
+        // Promoting it to a computed lets Vue cache the result and only
+        // recompute when its reactive deps (selectedTrendMoments / emotions
+        // / latestMomentDate via moments) actually change. All three call
+        // sites now read it as a property — see edits below.
+        trendSeries() {
+          const days = (() => {
+            const latest = this.latestMomentDate();
+            const start = new Date(latest);
+            start.setDate(start.getDate() - 6);
+            return Array.from({ length: 7 }, (_, index) => {
+              const date = new Date(start);
+              date.setDate(start.getDate() + index);
+              return date;
+            });
+          })();
+          return days.map(day => {
+            const key = this.dayKey(day);
+            const entries = this.selectedTrendMoments.filter(moment => this.dayKey(this.parseMomentDate(moment)) === key);
+            const emotionCounts = {};
+            this.emotions.forEach(e => { emotionCounts[e] = 0; });
+            entries.forEach(m => { emotionCounts[m.emotion]++; });
+
+            const toneTotal = entries.reduce((sum, moment) => sum + this.emotionTone(moment.emotion), 0);
+            const toneScore = entries.length ? Number((toneTotal / entries.length).toFixed(2)) : null;
+            const dominantEmotion = this.emotions
+              .map(emotion => ({ emotion, count: emotionCounts[emotion] }))
+              .sort((a, b) => b.count - a.count)[0]?.emotion || 'No dominant emotion';
+
+            return {
+              label: this.dayLabel(day),
+              total: entries.length,
+              emotionCounts,
+              toneScore,
+              dominantEmotion
+            };
+          });
+        },
         filteredMoments() {
           const from = this.historyDateFrom ? new Date(`${this.historyDateFrom}T00:00`) : null;
           const to = this.historyDateTo ? new Date(`${this.historyDateTo}T23:59`) : null;
@@ -1993,7 +2112,7 @@
           ];
         },
         trendMilestones() {
-          const trend = this.trendSeries().filter(point => point.total > 0 && point.toneScore !== null);
+          const trend = this.trendSeries.filter(point => point.total > 0 && point.toneScore !== null);
           if (!trend.length) return [];
 
           const highest = [...trend].sort((a, b) => b.toneScore - a.toneScore)[0];
@@ -2025,7 +2144,7 @@
           return items.slice(0, 3);
         },
         trendSummary() {
-          const trend = this.trendSeries();
+          const trend = this.trendSeries;
           const totalRecords = trend.reduce((sum, p) => sum + p.total, 0);
           const scope = this.selectedTrendResident === 'All residents' ? 'the home' : this.selectedTrendResident;
 
@@ -2070,12 +2189,13 @@
         }
       },
       watch: {
-        moments: {
-          deep: true,
-          handler() {
-            if (this.activeTab === 'Overview') {
-              this.scheduleChartRender();
-            }
+        // [Perf] Removed `deep: true` — moments are only ever appended via
+        // saveMoment() (never mutated in place), so a shallow watch on the
+        // array reference / length is enough and avoids a deep diff on every
+        // Vue patch cycle.
+        moments() {
+          if (this.activeTab === 'Overview') {
+            this.scheduleChartRender();
           }
         },
         selectedTrendResident() {
@@ -2249,9 +2369,18 @@
           return new Date(moment.timestamp.replace(' ', 'T'));
         },
         latestMomentDate() {
-          return this.moments.length
-            ? this.parseMomentDate([...this.moments].sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0])
-            : new Date();
+          // [Perf] Was: `[...this.moments].sort(...).` – O(n log n) and a full
+          // array clone every call. This method is hit indirectly from
+          // `lastNDaysMoments` / `trendDays` / `polarBins`, so it ran many
+          // times per render. A single reduce pass (O(n), no clone) gives the
+          // same result. Falls back to `new Date()` when there are no moments.
+          if (!this.moments.length) return new Date();
+          let latestStamp = this.moments[0].timestamp;
+          for (let i = 1; i < this.moments.length; i++) {
+            const stamp = this.moments[i].timestamp;
+            if (stamp > latestStamp) latestStamp = stamp;
+          }
+          return new Date(latestStamp.replace(' ', 'T'));
         },
         lastNDaysMoments(days) {
           const latest = this.latestMomentDate();
@@ -2280,29 +2409,8 @@
         emotionTone(emotion) {
           return this.emotionVisual(emotion).score || 0;
         },
-        trendSeries() {
-          return this.trendDays().map(day => {
-            const key = this.dayKey(day);
-            const entries = this.selectedTrendMoments.filter(moment => this.dayKey(this.parseMomentDate(moment)) === key);
-            const emotionCounts = {};
-            this.emotions.forEach(e => { emotionCounts[e] = 0; });
-            entries.forEach(m => { emotionCounts[m.emotion]++; });
-
-            const toneTotal = entries.reduce((sum, moment) => sum + this.emotionTone(moment.emotion), 0);
-            const toneScore = entries.length ? Number((toneTotal / entries.length).toFixed(2)) : null;
-            const dominantEmotion = this.emotions
-              .map(emotion => ({ emotion, count: emotionCounts[emotion] }))
-              .sort((a, b) => b.count - a.count)[0]?.emotion || 'No dominant emotion';
-
-            return {
-              label: this.dayLabel(day),
-              total: entries.length,
-              emotionCounts,
-              toneScore,
-              dominantEmotion
-            };
-          });
-        },
+        // [Perf] `trendSeries` has been promoted to a computed (see above)
+        // so Vue can cache it across multiple call sites. Method removed.
         countsByEmotion() {
           return this.emotions.map(emotion => this.moments.filter(moment => moment.emotion === emotion).length);
         },
@@ -2541,7 +2649,7 @@
           // silently when D3 is missing or the ref is not yet mounted.
           this.renderPolarClock();
 
-          const trend = this.trendSeries();
+          const trend = this.trendSeries;
           const emotionColorMap = Object.fromEntries(
             this.emotions.map(emotion => [emotion, this.emotionVisual(emotion).mid])
           );
@@ -2684,66 +2792,7 @@
         }
       }
     }).mount('#app');
-  </script>
-
-  <script>
-    // Back-to-portfolio button: shows after the user has scrolled past the
-    // top header area, hides while scrolling down (so it doesn't compete
-    // with reading), reappears on scroll-up or when near the page bottom.
-    (function () {
-      const btn = document.getElementById('backToPortfolio');
-      if (!btn) return;
-
-      const SHOW_AFTER = 140;        // px scrolled before the button is allowed to appear
-      const DOWN_HIDE_DELTA = 6;     // tiny down-scroll threshold to trigger hide
-      const UP_SHOW_DELTA = 4;       // tiny up-scroll threshold to trigger show
-      const BOTTOM_REVEAL = 200;     // px from bottom: always show
-
-      let lastY = window.scrollY;
-      let ticking = false;
-      let visible = false;
-
-      const setVisible = (next) => {
-        if (next === visible) return;
-        visible = next;
-        btn.classList.toggle('is-visible', next);
-      };
-
-      const update = () => {
-        const y = window.scrollY;
-        const docH = document.documentElement.scrollHeight;
-        const winH = window.innerHeight;
-        const nearBottom = y + winH >= docH - BOTTOM_REVEAL;
-
-        if (y < SHOW_AFTER) {
-          // Inside the hero/header area — stay hidden, don't compete with the page identity.
-          setVisible(false);
-        } else if (nearBottom) {
-          // Reached the end — user is naturally looking for an exit.
-          setVisible(true);
-        } else {
-          const dy = y - lastY;
-          if (dy > DOWN_HIDE_DELTA) {
-            setVisible(false);
-          } else if (dy < -UP_SHOW_DELTA) {
-            setVisible(true);
-          }
-        }
-
-        lastY = y;
-        ticking = false;
-      };
-
-      window.addEventListener('scroll', () => {
-        if (!ticking) {
-          window.requestAnimationFrame(update);
-          ticking = true;
-        }
-      }, { passive: true });
-
-      // Keyboard users: reveal whenever the button gets focus via Tab.
-      btn.addEventListener('focus', () => setVisible(true));
-    })();
+    });
   </script>
 </body>
 </html>
