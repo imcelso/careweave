@@ -58,65 +58,104 @@
     }
 
     /* =====================================================================
-       TYPOGRAPHY SYSTEM — single source of truth
+       TYPOGRAPHY SYSTEM — unified page scale (index8)
        ---------------------------------------------------------------------
-       One scale governs every piece of text. Combine ONE structural class
-       (.t-display / .t-h1 / .t-h2 / .t-h3 / .t-body / .t-body-sm /
-        .t-caption / .t-micro) with optional ROLE classes (.t-kicker for
-       uppercase eyebrow labels, .t-badge for pill labels, .t-num for KPI
-       numbers, .t-meta for muted secondary text). Never set raw
-       text-xs/sm/lg/xl or font-semibold in markup — that bypasses the
-       scale and is what created the previous inconsistency.
+       Fewer steps, clearer roles. Prefer these over raw text-xs/sm/lg.
+
+       display  2.00  KPI numbers only
+       h1       1.125 brand mark (header)
+       h2       1.25  ONE section title per major block
+       h3       1.0625 card / nested titles
+       body     0.9375 long prose (notes, AI reflection, insights)
+       body-sm  0.875  default UI (labels, lists, short helper)
+       caption  0.75   meta, timestamps, chart helpers
+       kicker   0.6875 short uppercase eyebrows only
+       badge    0.625  chips
+       micro    0.625  footer / legal
        ===================================================================== */
 
-    /* Display — only for hero KPI numbers (large stat blocks). */
-    .t-display { font-size: 2.25rem;  line-height: 1;     font-weight: 600; letter-spacing: -0.01em; }
-
-    /* H1 — single top-level page brand mark. */
-    .t-h1      { font-size: 1.5rem;   line-height: 2rem;  font-weight: 600; letter-spacing: 0; }
-
-    /* H2 — primary section title (one per major section / card cluster). */
-    .t-h2      { font-size: 1.5rem;   line-height: 2rem;  font-weight: 600; letter-spacing: -0.005em; }
-
-    /* H3 — subsection / card title inside a section. */
-    .t-h3      { font-size: 1.125rem; line-height: 1.6rem; font-weight: 600; letter-spacing: 0; }
-
-    /* Body / lead — long-form paragraphs, AI prompts, descriptions. */
-    .t-body    { font-size: 1rem;     line-height: 1.65;  font-weight: 400; }
-
-    /* Body small — secondary descriptions, list items, table cells. */
-    .t-body-sm { font-size: 0.875rem; line-height: 1.5;   font-weight: 400; }
-
-    /* Caption — meta info, timestamps, helper text. */
-    .t-caption { font-size: 0.8125rem; line-height: 1.45; font-weight: 400; }
-
-    /* Micro — legal, footnotes, tiny chip text. */
-    .t-micro   { font-size: 0.6875rem; line-height: 1.35; font-weight: 400; letter-spacing: 0.01em; }
-
-    /* ----- Role modifiers (compose with a structural class) ----- */
-
-    /* Kicker / eyebrow — ALL uppercase mini-labels above titles. ALWAYS
-       paired with .t-caption (never .t-body-sm/.t-micro) so the eyebrow
-       stays at one consistent size across the whole page. */
-    .t-kicker {
-      font-size: 0.75rem; line-height: 1.1; font-weight: 700;
-      letter-spacing: 0.14em; text-transform: uppercase;
+    .t-display {
+      margin: 0;
+      font-size: 2rem;
+      line-height: 1;
+      font-weight: 600;
+      letter-spacing: -0.02em;
     }
 
-    /* Badge — pill chips, tags, AI-Powered marks. */
+    .t-h1 {
+      margin: 0;
+      font-size: 1.125rem;
+      line-height: 1.25;
+      font-weight: 600;
+      letter-spacing: -0.015em;
+    }
+
+    .t-h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      line-height: 1.3;
+      font-weight: 600;
+      letter-spacing: -0.015em;
+    }
+
+    .t-h3 {
+      margin: 0;
+      font-size: 1.0625rem;
+      line-height: 1.3;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .t-body {
+      margin: 0;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+      font-weight: 400;
+    }
+
+    .t-body-sm {
+      margin: 0;
+      font-size: 0.875rem;
+      line-height: 1.5;
+      font-weight: 400;
+    }
+
+    .t-caption {
+      margin: 0;
+      font-size: 0.75rem;
+      line-height: 1.45;
+      font-weight: 400;
+    }
+
+    .t-micro {
+      margin: 0;
+      font-size: 0.625rem;
+      line-height: 1.4;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+    }
+
+    .t-kicker {
+      display: block;
+      margin: 0;
+      font-size: 0.6875rem;
+      line-height: 1.25;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
     .t-badge {
-      font-size: 0.6875rem; line-height: 1; font-weight: 700;
+      font-size: 0.625rem;
+      line-height: 1;
+      font-weight: 700;
       letter-spacing: 0.04em;
     }
 
-    /* Numeric stat label paired with .t-display. */
-    .t-num     { font-variant-numeric: tabular-nums; }
+    .t-num    { font-variant-numeric: tabular-nums; }
+    .t-strong { font-weight: 600; }
+    .t-muted  { color: #6b7d77; }
 
-    /* Strong inline emphasis inside .t-body / .t-body-sm. */
-    .t-strong  { font-weight: 600; }
-
-    /* Muted role — apply alongside structural class for de-emphasis. */
-    .t-muted   { color: #6b7d77; }
     /* ===================================================================== */
 
     /* =====================================================================
@@ -128,7 +167,7 @@
        例如 class="stack-md" / class="kicker-gap" / class="rhythm-loose"。
        ===================================================================== */
 
-    /* 节奏 token（同时暴露为 CSS 变量，方便扩展） */
+    /* 节奏 + 统一卡片表面 token */
     :root {
       --rhythm-2xs: 0.25rem;  /* 4px  —— 行内紧贴 */
       --rhythm-xs:  0.375rem; /* 6px  —— 标签↔值 */
@@ -137,6 +176,10 @@
       --rhythm-lg:  1rem;     /* 16px —— 段落↔段落 */
       --rhythm-xl:  1.5rem;   /* 24px —— 卡片内子区块之间 */
       --rhythm-2xl: 2rem;     /* 32px —— 卡片之间（大节奏） */
+      --panel-bg: #fff;
+      --panel-border: rgba(47, 61, 56, 0.14);
+      --panel-radius: 1.25rem;
+      --panel-shadow: 0 10px 28px -18px rgba(48, 70, 67, 0.22);
     }
 
     /* 1）垂直堆叠（直接子元素之间的间距） */
@@ -147,12 +190,255 @@
     .stack-lg  > * + * { margin-top: var(--rhythm-lg);  }
     .stack-xl  > * + * { margin-top: var(--rhythm-xl);  }
 
-    /* 2）"小标签 → 标题"之间的固定缝隙 —— 之前 mt-1 / mt-2 混用，
-          统一为 8 px，避免某些卡片偏挤、某些偏空。 */
-    .kicker-gap { margin-top: var(--rhythm-sm); }
+    /* 2）小标签 → 标题：紧凑 6px（原先 8px 再叠松行高会显得空）。 */
+    .kicker-gap { margin-top: var(--rhythm-xs); }
 
-    /* 3）"标题 → 正文"之间的固定缝隙 —— 默认 12 px。 */
-    .title-gap  { margin-top: var(--rhythm-md); }
+    /* 3）标题 → 正文：8px，正常阅读间距。 */
+    .title-gap  { margin-top: var(--rhythm-sm); }
+
+    /* 标题块：kicker + title + optional lede 的默认竖向节奏 */
+    .title-block > * + * { margin-top: 0; }
+    .title-block .kicker-gap { margin-top: var(--rhythm-xs); }
+    .title-block .title-gap  { margin-top: var(--rhythm-sm); }
+
+    /* Shared solid surface — all page cards match Focus */
+    .panel-surface,
+    .insight-panel,
+    .save-success-banner,
+    main .shadow-soft,
+    main .rounded-\[1\.5rem\],
+    main .rounded-\[1\.25rem\] {
+      background: var(--panel-bg) !important;
+      background-image: none !important;
+      border: 1px solid var(--panel-border) !important;
+      border-radius: var(--panel-radius) !important;
+      box-shadow: var(--panel-shadow) !important;
+      /* Kill Tailwind ring/shadow utilities that fight the solid surface */
+      --tw-ring-shadow: 0 0 #0000 !important;
+      --tw-ring-offset-shadow: 0 0 #0000 !important;
+      --tw-shadow: 0 0 #0000 !important;
+    }
+    /* Nested cards / tiles inside modules — same fill, quieter elevation */
+    main .rounded-2xl.border,
+    main .rounded-2xl.bg-care-mist,
+    main .rounded-2xl.bg-care-mist\/70,
+    main .rounded-2xl.bg-care-mist\/60,
+    main .rounded-2xl.bg-care-cream,
+    main .rounded-2xl.bg-white\/88,
+    main .rounded-2xl.bg-white\/78,
+    main .bg-care-mist\/60.rounded-2xl,
+    details.method-card {
+      background: var(--panel-bg) !important;
+      background-image: none !important;
+      border: 1px solid rgba(47, 61, 56, 0.12) !important;
+      box-shadow: none !important;
+    }
+
+    /* =====================================================================
+       FOCUS PANEL (Overview sidebar) — clear hierarchy, solid surfaces
+       ===================================================================== */
+    .focus-panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 1.15rem 1.15rem 1rem;
+    }
+    .tone-panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 1.15rem 1.15rem 1rem;
+    }
+    .focus-panel__id {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(47, 61, 56, 0.1);
+    }
+    .focus-panel__photo {
+      width: 4.5rem;
+      height: 4.5rem;
+      border-radius: 0.85rem;
+      object-fit: cover;
+      object-position: 50% 20%;
+      background: #eef3f2;
+      border: 1px solid rgba(47, 61, 56, 0.12);
+      flex-shrink: 0;
+    }
+    .focus-panel__id .t-h3 {
+      font-size: 1.125rem;
+    }
+    .focus-panel__control {
+      margin-top: 1rem;
+    }
+    .focus-panel__control label {
+      display: block;
+      margin-bottom: 0.4rem;
+    }
+    .focus-panel__control select {
+      width: 100%;
+      height: 2.75rem;
+      padding: 0 0.9rem;
+      border-radius: 0.85rem;
+      border: 1px solid rgba(47, 61, 56, 0.22);
+      background: #f7f4ee;
+      color: #263532;
+      font: inherit;
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .focus-panel__control select:focus {
+      border-color: #4f7f68;
+      box-shadow: 0 0 0 3px rgba(143, 181, 161, 0.28);
+    }
+    .focus-panel__meta {
+      margin: 1rem 0 0;
+      padding: 0;
+      border: 1px solid rgba(47, 61, 56, 0.12);
+      border-radius: 0.9rem;
+      overflow: hidden;
+      background: var(--panel-bg);
+    }
+    .focus-panel__row {
+      display: grid;
+      grid-template-columns: 4.25rem minmax(0, 1fr);
+      gap: 0.65rem;
+      align-items: start;
+      margin: 0;
+      padding: 0.75rem 0.9rem;
+      border-top: 1px solid rgba(47, 61, 56, 0.08);
+    }
+    .focus-panel__row:first-child { border-top: 0; }
+    .focus-panel__row dt {
+      margin: 0;
+      padding-top: 0.1rem;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #6b7d77;
+      line-height: 1.3;
+    }
+    .focus-panel__row dd {
+      margin: 0;
+      min-width: 0;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #263532;
+      line-height: 1.4;
+    }
+    .focus-panel__row dd .focus-panel__time {
+      display: block;
+      margin-top: 0.2rem;
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: #6b7d77;
+    }
+    .focus-panel__row.is-latest {
+      background: rgba(143, 181, 161, 0.12);
+    }
+    .focus-panel__row.is-latest dt {
+      color: #4f7f68;
+    }
+    .focus-panel__note {
+      margin-top: auto;
+      padding-top: 1rem;
+    }
+    .focus-panel__note-inner {
+      margin: 0;
+      padding: 0.7rem 0.8rem;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(47, 61, 56, 0.12);
+      background: var(--panel-bg);
+      font-size: 0.75rem;
+      line-height: 1.45;
+      color: #6b7d77;
+    }
+
+    /* =====================================================================
+       INSIGHT PANEL (Overview AI insight) — light, even rhythm
+       ===================================================================== */
+    .insight-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem; /* even spacing between head / body / meta */
+      padding: 1.1rem 1.2rem;
+      /* surface: shared .panel-surface rules */
+    }
+    .insight-panel__head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.4rem 0.75rem;
+    }
+    .insight-panel__brand {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem 0.6rem;
+      min-width: 0;
+    }
+    .insight-panel__brand .t-kicker {
+      display: inline;
+    }
+    .insight-panel__hint {
+      margin: 0;
+      width: 100%;
+      font-size: 0.75rem;
+      line-height: 1.4;
+      color: #6b7d77;
+    }
+    .insight-panel__badge {
+      display: inline-flex;
+      align-items: center;
+      height: 1.35rem;
+      padding: 0 0.5rem;
+      border-radius: 999px;
+      border: 1px solid rgba(79, 127, 104, 0.22);
+      background: rgba(143, 181, 161, 0.12);
+      color: #4f7f68;
+      font-size: 0.625rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+    .insight-panel__body {
+      margin: 0;
+      font-size: 0.9375rem; /* = body */
+      line-height: 1.55;
+      font-weight: 500;
+      color: #263532;
+      letter-spacing: -0.005em;
+      max-width: 46rem;
+    }
+    .insight-panel__meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem 0.55rem;
+      margin: 0;
+      padding-top: 0.75rem; /* same as panel gap — even rhythm across the divider */
+      border-top: 1px solid rgba(47, 61, 56, 0.1);
+    }
+    .insight-panel__stat {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.35rem;
+      padding: 0.3rem 0.6rem;
+      border-radius: 999px;
+      background: var(--panel-bg);
+      border: 1px solid rgba(47, 61, 56, 0.12);
+      font-size: 0.75rem;
+      line-height: 1.2;
+      color: #6b7d77;
+    }
+    .insight-panel__stat strong {
+      font-weight: 600;
+      color: #263532;
+    }
 
     /* 4）段落（连续 t-body / t-body-sm）之间的舒适距离 —— 16 px。 */
     .t-body + .t-body,
@@ -262,13 +548,13 @@
     }
     .d3-tooltip.is-visible { opacity: 1; }
     /* Methodology card + demo-data chip used in the polar clock header. */
-    details.method-card { border-radius: 1rem; background: rgba(238, 243, 242, 0.6); border: 1px solid rgba(143,181,161,0.28); padding: 0.6rem 0.85rem; }
-    details.method-card[open] { background: rgba(238, 243, 242, 0.85); }
+    details.method-card { border-radius: var(--panel-radius); padding: 0.6rem 0.85rem; }
+    details.method-card[open] { background: var(--panel-bg); }
     details.method-card > summary {
       list-style: none; cursor: pointer;
       display: flex; align-items: center; gap: 0.5rem;
-      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em;
-      text-transform: uppercase; color: #4f7f68;
+      font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.05em;
+      text-transform: uppercase; color: #4f7f68; /* = kicker */
     }
     details.method-card > summary::-webkit-details-marker { display: none; }
     details.method-card > summary::after {
@@ -276,17 +562,17 @@
     }
     details.method-card[open] > summary::after { content: "−"; }
     details.method-card .method-body {
-      margin-top: 0.6rem; font-size: 0.78rem; line-height: 1.6; color: #4a5b56;
+      margin-top: 0.6rem; font-size: 0.875rem; line-height: 1.55; color: #4a5b56; /* body-sm */
     }
     details.method-card code {
       background: rgba(255,255,255,0.7); padding: 0.05rem 0.35rem; border-radius: 4px;
-      font-size: 0.72rem; color: #2f4d40;
+      font-size: 0.75rem; color: #2f4d40; /* caption */
     }
-    details.method-card .method-cite { font-size: 0.7rem; color: #7a8c85; margin-top: 0.45rem; font-style: italic; }
+    details.method-card .method-cite { font-size: 0.75rem; color: #7a8c85; margin-top: 0.45rem; font-style: italic; }
     .data-mode-toggle {
       display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem;
-      border-radius: 999px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em;
-      text-transform: uppercase; background: rgba(143,181,161,0.18); color: #4f7f68;
+      border-radius: 999px; font-size: 0.625rem; font-weight: 700; letter-spacing: 0.05em;
+      text-transform: uppercase; background: rgba(143,181,161,0.18); color: #4f7f68; /* badge */
       border: 1px solid rgba(143,181,161,0.4);
     }
     .data-mode-toggle .dot {
@@ -297,6 +583,242 @@
       background: linear-gradient(145deg, #eef3f2, #f7f4ee);
       object-fit: cover;
       object-position: 50% 20%;
+    }
+
+    /* =====================================================================
+       EMOTION PICKER (Record) — rebuilt from scratch
+       ---------------------------------------------------------------------
+       Strict equal tiles: every chip is the same width (grid track) and
+       the same height (fixed). Icon sits in a fixed square well; label
+       sits in a fixed 2-line text box so short names (Warm connection)
+       and long names (Agitated / restless) share one vertical center.
+       No Tailwind utilities on the chip itself — avoids utility conflicts
+       with border/padding/line-height that previously threw alignment off.
+       ===================================================================== */
+    .emo-picker {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.65rem;
+    }
+    @media (min-width: 480px) {
+      .emo-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (min-width: 1100px) {
+      .emo-picker { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    .emo-chip {
+      --emo-bg: #f2f8f4;
+      --emo-mid: #91b19e;
+      --emo-border: #cddfd4;
+      --emo-border-strong: #5f8b70;
+      --emo-text: #3d654c;
+      --emo-icon-fg: #43614e;
+      box-sizing: border-box;
+      position: relative;
+      display: grid;
+      grid-template-columns: 2.5rem minmax(0, 1fr);
+      align-items: center;
+      column-gap: 0.7rem;
+      width: 100%;
+      height: 4.25rem;          /* fixed height for every chip */
+      margin: 0;
+      padding: 0 1.75rem 0 0.7rem; /* right room for check / suggested */
+      /* Always 2px so selected state never shifts layout */
+      border: 2px solid var(--emo-border);
+      border-radius: 1rem;
+      background: var(--emo-bg);
+      color: var(--emo-text);
+      font: inherit;
+      font-size: 0.875rem;
+      font-weight: 600;
+      letter-spacing: 0;
+      text-align: left;
+      cursor: pointer;
+      transition:
+        border-color 160ms ease,
+        background-color 160ms ease,
+        box-shadow 160ms ease;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .emo-chip:hover {
+      border-color: color-mix(in srgb, var(--emo-border-strong) 55%, var(--emo-border));
+      background: color-mix(in srgb, var(--emo-mid) 12%, var(--emo-bg));
+    }
+    .emo-chip:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--emo-border-strong) 26%, transparent);
+    }
+    /* Selected: deeper tint + solid edge + soft outer halo — not washed-out
+       white wash or double inset ring (those read as “broken”). */
+    .emo-chip.is-selected {
+      border-color: var(--emo-border-strong);
+      background: color-mix(in srgb, var(--emo-mid) 28%, var(--emo-bg));
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--emo-border-strong) 20%, transparent);
+    }
+    .emo-chip.is-selected:hover {
+      background: color-mix(in srgb, var(--emo-mid) 34%, var(--emo-bg));
+    }
+    .emo-chip.is-suggested:not(.is-selected) {
+      box-shadow: 0 0 0 3px rgba(143, 181, 161, 0.28);
+    }
+    /* Icon: soft same-hue circle — no white plate, no hard border */
+    .emo-chip__icon {
+      box-sizing: border-box;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--emo-mid) 32%, transparent);
+      color: var(--emo-icon-fg);
+      border: none;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      transition: background-color 160ms ease;
+    }
+    .emo-chip.is-selected .emo-chip__icon {
+      background: color-mix(in srgb, var(--emo-mid) 55%, #ffffff);
+    }
+    .emo-chip__icon img {
+      display: block;
+      width: 1.15rem;
+      height: 1.15rem;
+      object-fit: contain;
+      /* SVG-as-img stays dark; slight opacity keeps it soft on tinted discs */
+      opacity: 0.88;
+    }
+    .emo-chip.is-selected .emo-chip__icon img {
+      opacity: 1;
+    }
+    /* Clear selected affordance — small filled check, not a second border */
+    .emo-chip__check {
+      position: absolute;
+      top: 50%;
+      right: 0.55rem;
+      transform: translateY(-50%);
+      width: 1.15rem;
+      height: 1.15rem;
+      border-radius: 999px;
+      background: var(--emo-border-strong);
+      color: #fff;
+      display: none;
+      place-items: center;
+      pointer-events: none;
+    }
+    .emo-chip.is-selected .emo-chip__check {
+      display: grid;
+    }
+    .emo-chip__check svg {
+      display: block;
+      width: 0.7rem;
+      height: 0.7rem;
+    }
+    /* Fixed 2-line text slot — short and long labels share the same box,
+       so "Warm connection" lines up with "Agitated / restless". */
+    .emo-chip__body {
+      min-width: 0;
+      height: 2.5rem;           /* exactly 2 × 1.25 line-height */
+      display: flex;
+      align-items: center;      /* vertical center whatever is in the slot */
+    }
+    .emo-chip__name {
+      display: block;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      max-height: 2.5rem;
+      line-height: 1.25;
+      overflow: hidden;
+      overflow-wrap: break-word;
+      word-break: normal;
+      hyphens: none;
+    }
+    /* Suggested sits top-right; selected check uses the vertical center-right */
+    .emo-chip__badge {
+      position: absolute;
+      top: 0.35rem;
+      right: 0.5rem;
+      margin: 0;
+      padding: 0;
+      font-size: 0.625rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #4f7f68;
+      line-height: 1;
+      pointer-events: none;
+    }
+    .emo-chip.is-selected .emo-chip__badge {
+      display: none;
+    }
+
+    /* Save-success toast — visible feedback after Record submit */
+    .save-toast {
+      position: fixed;
+      top: 1.1rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(-0.5rem);
+      z-index: 80;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      max-width: min(28rem, calc(100vw - 1.5rem));
+      padding: 0.8rem 1.1rem;
+      border-radius: 999px;
+      background: #2f4d40;
+      color: #f7f4ee;
+      box-shadow: 0 14px 40px -12px rgba(38, 53, 50, 0.45);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+    .save-toast.is-visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
+    .save-toast__icon {
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 999px;
+      background: rgba(143, 181, 161, 0.35);
+      color: #dcebe2;
+    }
+    .save-toast__icon svg {
+      display: block;
+      width: 0.85rem;
+      height: 0.85rem;
+    }
+    .save-toast__text {
+      font-size: 0.875rem; /* body-sm */
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .save-success-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      /* surface shared with cards; keep success icon for status cue */
+      padding: 0.85rem 1rem;
+      color: #2f4d40;
+    }
+    .save-success-banner__icon {
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+      display: grid;
+      place-items: center;
+      width: 1.35rem;
+      height: 1.35rem;
+      border-radius: 999px;
+      background: #4f7f68;
+      color: #fff;
+    }
+    .save-success-banner__icon svg {
+      width: 0.75rem;
+      height: 0.75rem;
     }
     .float-soft {
       animation: floatSoft 5.5s ease-in-out infinite;
@@ -336,6 +858,19 @@
       0%, 48% { transform: translateX(-130%); }
       72%, 100% { transform: translateX(130%); }
     }
+    /* [Perf #7] Kill continuous decorative motion when the user prefers
+       reduced motion (OS setting). Also drop header blur — cheaper paint. */
+    @media (prefers-reduced-motion: reduce) {
+      .float-soft,
+      .pulse-soft,
+      .blink-soft,
+      .ai-sheen::after,
+      .animate-ping {
+        animation: none !important;
+      }
+      .ai-sheen::after { display: none; }
+      .polar-segment { transition: none; }
+    }
     .chart-wrap.tall {
       height: 21rem;
     }
@@ -343,44 +878,238 @@
       .chart-wrap { height: 20rem; }
       .chart-wrap.tall { height: 23rem; }
     }
-    .back-portfolio {
+    /* =====================================================================
+       SITE HEADER — compact single bar
+       ---------------------------------------------------------------------
+       Desktop:  [Portfolio capsule][Brand]  |  Tabs (center)  |  Staff
+       Mobile:   top row brand+staff, tabs full-width under
+       Keep vertical height low — no double-stack identity chrome.
+       ===================================================================== */
+    .site-header {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.7);
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .site-header__inner {
+      box-sizing: border-box;
+      width: 100%;
+      max-width: 80rem;
+      margin: 0 auto;
+      padding: 0.55rem 1rem;
+    }
+    @media (min-width: 640px) {
+      .site-header__inner { padding: 0.55rem 1.5rem; }
+    }
+    @media (min-width: 1024px) {
+      .site-header__inner { padding: 0.55rem 2rem; }
+    }
+
+    /* 3-column balance: left / center tabs / right */
+    .site-header__bar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      column-gap: 0.75rem;
+      min-width: 0;
+    }
+    .site-header__left {
+      justify-self: start;
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      min-width: 0;
+    }
+    .site-header__brand {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      min-width: 0;
+    }
+    .site-header__divider {
+      flex-shrink: 0;
+      width: 1px;
+      height: 1.65rem;
+      background: rgba(79, 127, 104, 0.28);
+    }
+    @media (max-width: 420px) {
+      .site-header__left { gap: 0.65rem; }
+      .site-header__divider { height: 1.4rem; }
+    }
+    .site-header__right {
+      justify-self: end;
+      min-width: 0;
+    }
+
+    /* Portfolio — soft capsule again */
+    .site-header__exit {
       display: inline-flex;
       align-items: center;
-      gap: 0.4rem;
-      padding: 0.45rem 0.85rem 0.45rem 0.7rem;
+      gap: 0.28rem;
+      flex-shrink: 0;
+      height: 2rem;
+      padding: 0 0.7rem 0 0.55rem;
       border-radius: 999px;
-      font-size: 0.8125rem;
-      font-weight: 600;
-      letter-spacing: 0.005em;
-      color: #4f7f68;
+      border: 1px solid rgba(143, 181, 161, 0.34);
       background: rgba(143, 181, 161, 0.14);
-      border: 1px solid rgba(143, 181, 161, 0.32);
-      transition:
-        background-color 200ms ease,
-        border-color 200ms ease,
-        color 200ms ease;
+      color: #4f7f68;
+      font-size: 0.75rem; /* = caption */
+      font-weight: 600;
+      letter-spacing: 0.01em;
       text-decoration: none;
       white-space: nowrap;
+      transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
     }
-    .back-portfolio:hover {
+    .site-header__exit:hover {
       background: rgba(143, 181, 161, 0.24);
       border-color: rgba(143, 181, 161, 0.5);
       color: #3f6b56;
     }
-    .back-portfolio:focus-visible {
+    .site-header__exit:focus-visible {
       outline: none;
-      box-shadow: 0 0 0 4px rgba(143, 181, 161, 0.28);
+      box-shadow: 0 0 0 3px rgba(143, 181, 161, 0.28);
     }
-    .back-portfolio svg {
+    .site-header__exit svg {
       flex-shrink: 0;
-      transition: transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
+      transition: transform 180ms ease;
     }
-    .back-portfolio:hover svg {
-      transform: translateX(-2px);
+    .site-header__exit:hover svg { transform: translateX(-1.5px); }
+    @media (max-width: 420px) {
+      .site-header__exit-label { display: none; }
+      .site-header__exit { padding: 0 0.5rem; }
     }
-    @media (max-width: 380px) {
-      .back-portfolio__label { display: none; }
-      .back-portfolio { padding: 0.45rem 0.55rem; }
+
+    .site-header__mark {
+      display: grid;
+      place-items: center;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 0.65rem;
+      background: #4f7f68;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .site-header__mark svg {
+      width: 1.05rem;
+      height: 1.05rem;
+    }
+    .site-header__titles {
+      min-width: 0;
+    }
+    .site-header__titles .t-h1 {
+      color: #263532;
+    }
+    /* Tagline only when there is room — keeps the bar thin */
+    .site-header__titles .t-caption {
+      display: none;
+      margin-top: 0.1rem;
+    }
+    @media (min-width: 1100px) {
+      .site-header__titles .t-caption { display: block; }
+    }
+
+    .site-header__staff {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-shrink: 0;
+      height: 2rem;
+      padding: 0 0.65rem 0 0.3rem;
+      border-radius: 999px;
+      background: rgba(238, 243, 242, 0.95);
+      border: 1px solid rgba(143, 181, 161, 0.28);
+      color: #4a5b56;
+      font-size: 0.75rem; /* caption */
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .site-header__avatar {
+      display: grid;
+      place-items: center;
+      width: 1.35rem;
+      height: 1.35rem;
+      border-radius: 999px;
+      background: #4f7f68;
+      color: #fff;
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .site-header__staff strong {
+      font-weight: 600;
+      color: #2f4d40;
+    }
+    .site-header__staff-sep { color: #94a39d; }
+    .site-header__staff-meta { color: #6b7d77; font-weight: 400; }
+    @media (max-width: 560px) {
+      .site-header__staff-meta,
+      .site-header__staff-sep { display: none; }
+    }
+
+    /* Centered tab cluster */
+    .site-header__nav {
+      justify-self: center;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.15rem;
+      width: min(22.5rem, 42vw);
+      min-width: 16.5rem;
+      margin: 0;
+      padding: 0.18rem;
+      border-radius: 999px;
+      background: rgba(238, 243, 242, 0.98);
+      box-shadow: inset 0 1px 2px rgba(48, 70, 67, 0.04);
+    }
+    .site-header__nav .tab-btn {
+      height: 2.15rem;
+      border-radius: 999px;
+      background: transparent;
+      color: #5a6d67;
+      font-size: 0.875rem; /* body-sm */
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+    }
+    .site-header__nav .tab-btn.is-active {
+      background: #fff;
+      color: #4f7f68;
+      box-shadow: 0 1px 2px rgba(48, 70, 67, 0.08);
+    }
+    .site-header__nav .tab-btn:hover:not(.is-active) {
+      color: #263532;
+      background: rgba(255, 255, 255, 0.5);
+    }
+    /* On mid widths, drop tab icons to keep the center cluster compact */
+    @media (max-width: 960px) {
+      .site-header__nav .tab-ico { display: none; }
+      .site-header__nav { width: min(18rem, 46vw); min-width: 14.5rem; }
+    }
+
+    /* Narrow screens: brand+staff on top, tabs full width under */
+    @media (max-width: 780px) {
+      .site-header__bar {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+          "left right"
+          "nav nav";
+        row-gap: 0.45rem;
+      }
+      .site-header__left { grid-area: left; }
+      .site-header__right { grid-area: right; }
+      .site-header__nav {
+        grid-area: nav;
+        justify-self: stretch;
+        width: 100%;
+        min-width: 0;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .site-header {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(255, 255, 255, 0.94);
+      }
+      .site-header__exit svg { transition: none; }
     }
 
     /* ============================================================
@@ -414,7 +1143,7 @@
       border-radius: 1rem;
       background-color: var(--care-cream, #f7f4ec);
       font-family: inherit;
-      font-size: 0.95rem;
+      font-size: 0.875rem; /* = body-sm */
       line-height: 1.2;
       color: var(--care-ink, #2f3a36);
       outline: none;
@@ -443,7 +1172,7 @@
       border-radius: 1rem;
       background-color: var(--care-cream, #f7f4ec);
       font-family: inherit;
-      font-size: 0.95rem;
+      font-size: 0.875rem; /* = body-sm */
       color: var(--care-ink, #2f3a36);
       outline: none;
       transition: border-color 160ms ease, box-shadow 160ms ease;
@@ -484,74 +1213,106 @@
 </head>
 <body class="min-h-screen text-care-ink antialiased">
   <div id="app" v-cloak class="min-h-screen">
-    <header class="border-b border-white/70 bg-white/70 backdrop-blur">
-      <div class="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
-        <div class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-          <div class="flex items-center gap-3">
-            <a href="https://celso.cc" class="back-portfolio" aria-label="Back to portfolio">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Global toast for Record save success (also mirrored inline under the form) -->
+    <div
+      class="save-toast"
+      :class="{ 'is-visible': !!saveSuccess }"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <span class="save-toast__icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16" fill="none">
+          <path d="M3.5 8.2 6.4 11l6.1-6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <div class="save-toast__text" v-if="saveSuccess">Moment saved</div>
+    </div>
+
+    <header class="site-header">
+      <div class="site-header__inner">
+        <div class="site-header__bar">
+          <!-- Left: portfolio capsule + brand -->
+          <div class="site-header__left">
+            <a href="https://celso.cc" class="site-header__exit" aria-label="Back to portfolio">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              <span class="back-portfolio__label">Back to portfolio</span>
+              <span class="site-header__exit-label">Portfolio</span>
             </a>
-            <span class="hidden h-7 w-px bg-care-sageDark/15 sm:block" aria-hidden="true"></span>
-            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-care-sageDark text-white shadow-soft">
-              <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 20s-7-4.35-7-10.15A4.32 4.32 0 0 1 9.36 5.5c1.2 0 2.22.57 2.64 1.28.42-.71 1.44-1.28 2.64-1.28A4.32 4.32 0 0 1 19 9.85C19 15.65 12 20 12 20Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            <div>
-              <h1 class="t-h1 text-care-ink">CareWeave</h1>
-              <p class="t-caption text-slate-600">Moments that matter</p>
+            <span class="site-header__divider" aria-hidden="true"></span>
+            <div class="site-header__brand">
+              <div class="site-header__mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M12 20s-7-4.35-7-10.15A4.32 4.32 0 0 1 9.36 5.5c1.2 0 2.22.57 2.64 1.28.42-.71 1.44-1.28 2.64-1.28A4.32 4.32 0 0 1 19 9.85C19 15.65 12 20 12 20Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="site-header__titles">
+                <h1 class="t-h1">CareWeave</h1>
+                <p class="t-caption t-muted">Moments that matter</p>
+              </div>
             </div>
           </div>
-          <div class="flex flex-wrap items-center gap-3">
-            <div class="rounded-full bg-care-mist px-4 py-2 t-caption text-slate-700">
-              Current staff member <span class="t-strong text-care-sageDark">Ana</span>
-            </div>
-            <div class="rounded-full bg-white px-4 py-2 t-caption text-slate-600 shadow-sm">
-              Shift partner: Lars
+
+          <!-- Center: primary tabs -->
+          <nav class="site-header__nav" aria-label="Primary">
+            <button
+              v-for="tab in tabs"
+              :key="tab"
+              type="button"
+              class="tab-btn"
+              :class="{ 'is-active': activeTab === tab }"
+              :aria-current="activeTab === tab ? 'page' : undefined"
+              @click="setTab(tab)"
+            >
+              <span class="tab-inner">
+                <span class="tab-ico" aria-hidden="true">
+                  <svg v-if="tab === 'Overview'" viewBox="0 0 24 24" fill="none">
+                    <path d="M4 17.5c2.2-4.2 4.5-5.4 6.8-3.5 1.9 1.6 3.4 1.2 4.6-.9L20 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    <circle cx="10.8" cy="14" r="1.15" fill="currentColor"/>
+                    <circle cx="15.4" cy="13.1" r="1.15" fill="currentColor"/>
+                  </svg>
+                  <svg v-else-if="tab === 'Record'" viewBox="0 0 24 24" fill="none">
+                    <path d="M7 4.8h7.5L18 8.3v10.9a1.8 1.8 0 0 1-1.8 1.8H7a1.8 1.8 0 0 1-1.8-1.8V6.6A1.8 1.8 0 0 1 7 4.8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                    <path d="M14.5 4.8v3.7H18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M11.6 16.4s-3-1.8-3-4.2a1.75 1.75 0 0 1 3-1.25 1.75 1.75 0 0 1 3 1.25c0 2.4-3 4.2-3 4.2Z" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <svg v-else viewBox="0 0 24 24" fill="none">
+                    <path d="M12 7.2v5.1l3.2 1.9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M5.5 6.7A8.2 8.2 0 1 1 4 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4.2 4.6v4.1h4.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <span class="tab-label">{{ tab }}</span>
+              </span>
+            </button>
+          </nav>
+
+          <!-- Right: staff meta -->
+          <div class="site-header__right">
+            <div class="site-header__staff" title="Current staff on this shift">
+              <span class="site-header__avatar" aria-hidden="true">A</span>
+              <span>
+                <strong>Ana</strong>
+                <span class="site-header__staff-sep"> · </span>
+                <span class="site-header__staff-meta">with Lars</span>
+              </span>
             </div>
           </div>
         </div>
-        <nav class="grid grid-cols-3 rounded-2xl bg-care-mist p-1 shadow-inner md:w-[28rem]" aria-label="Primary">
-          <button
-            v-for="tab in tabs"
-            :key="tab"
-            type="button"
-            class="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition"
-            :class="activeTab === tab ? 'bg-white text-care-sageDark shadow-sm' : 'text-slate-600 hover:text-care-ink'"
-            @click="setTab(tab)"
-          >
-            <svg v-if="tab === 'Overview'" class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M4 17.5c2.2-4.2 4.5-5.4 6.8-3.5 1.9 1.6 3.4 1.2 4.6-.9L20 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-              <circle cx="10.8" cy="14" r="1.15" fill="currentColor"/>
-              <circle cx="15.4" cy="13.1" r="1.15" fill="currentColor"/>
-            </svg>
-            <svg v-else-if="tab === 'Record'" class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M7 4.8h7.5L18 8.3v10.9a1.8 1.8 0 0 1-1.8 1.8H7a1.8 1.8 0 0 1-1.8-1.8V6.6A1.8 1.8 0 0 1 7 4.8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
-              <path d="M14.5 4.8v3.7H18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M11.6 16.4s-3-1.8-3-4.2a1.75 1.75 0 0 1 3-1.25 1.75 1.75 0 0 1 3 1.25c0 2.4-3 4.2-3 4.2Z" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <svg v-else class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 7.2v5.1l3.2 1.9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M5.5 6.7A8.2 8.2 0 1 1 4 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M4.2 4.6v4.1h4.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span>{{ tab }}</span>
-          </button>
-        </nav>
       </div>
     </header>
 
     <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <section v-if="activeTab === 'Record'" class="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]">
+      <!-- [Perf #6] v-show keeps tab DOM (and Overview chart canvases) mounted
+           so switching tabs does not destroy/rebuild Chart.js + D3 every time. -->
+      <section v-show="activeTab === 'Record'" class="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]">
         <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-7">
-          <div class="mb-6 flex flex-col gap-2">
-            <p class="t-kicker text-care-sageDark">Quick Capture</p>
+          <div class="title-block mb-6">
+            <p class="t-kicker text-care-sageDark">Quick capture</p>
             <h2 class="kicker-gap t-h2 text-care-ink">Record a moment</h2>
-            <p class="title-gap max-w-2xl t-body text-slate-600">
+            <p class="title-gap max-w-2xl t-body-sm text-slate-600">
               A short note from morning tea, garden time, a reminiscence group, or handover can be enough.
             </p>
           </div>
@@ -562,7 +1323,7 @@
               <select
                 id="resident"
                 v-model="form.resident"
-                class="w-full rounded-2xl border border-care-sageDark/35 bg-care-cream px-4 py-3 t-body text-care-ink outline-none transition focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
+                class="w-full rounded-2xl border border-care-sageDark/35 bg-care-cream px-4 py-3 t-body-sm text-care-ink outline-none transition focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
               >
                 <option value="">Select a resident</option>
                 <option v-for="resident in residents" :key="resident" :value="resident">{{ resident }}</option>
@@ -570,21 +1331,38 @@
             </div>
 
             <div>
-              <fieldset>
+              <fieldset class="m-0 min-w-0 border-0 p-0">
                 <legend class="mb-3 block t-body-sm t-strong text-slate-700">Emotion tag</legend>
-                <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div class="emo-picker" role="radiogroup" aria-label="Emotion tag">
                   <button
                     v-for="emotion in emotions"
                     :key="emotion"
                     type="button"
-                    class="min-h-[3.25rem] rounded-2xl border px-4 py-3 text-left t-body-sm t-strong transition"
-                    :class="[form.emotion === emotion ? emotionStyles[emotion].selected : emotionStyles[emotion].idle, suggestedEmotion === emotion && form.emotion !== emotion ? 'ring-4 ring-emerald-200 shadow-[0_0_0_4px_rgba(143,181,161,0.22)]' : '']"
+                    role="radio"
+                    class="emo-chip"
+                    :class="{
+                      'is-selected': form.emotion === emotion,
+                      'is-suggested': suggestedEmotion === emotion && form.emotion !== emotion
+                    }"
+                    :style="emotionChipVars(emotion)"
+                    :aria-checked="form.emotion === emotion ? 'true' : 'false'"
                     @click="selectEmotion(emotion)"
                   >
-                    <span class="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-full" :style="emotionIconStyle(emotion)" aria-hidden="true">
-                      <img class="block h-3.5 w-3.5" :src="emotionVisual(emotion).icon" alt="" />
-                    </span>{{ emotion }}
-                    <span v-if="suggestedEmotion === emotion && form.emotion !== emotion" class="mt-1 block t-micro t-strong text-care-sageDark">✨ Suggested</span>
+                    <span class="emo-chip__icon" aria-hidden="true">
+                      <img :src="emotionVisual(emotion).icon" alt="" width="18" height="18" decoding="async" />
+                    </span>
+                    <span class="emo-chip__body">
+                      <span class="emo-chip__name">{{ emotion }}</span>
+                    </span>
+                    <span class="emo-chip__check" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" fill="none">
+                        <path d="M3.5 8.2 6.4 11l6.1-6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </span>
+                    <span
+                      v-if="suggestedEmotion === emotion && form.emotion !== emotion"
+                      class="emo-chip__badge"
+                    >Suggested</span>
                   </button>
                 </div>
               </fieldset>
@@ -597,7 +1375,7 @@
                 v-model.trim="form.note"
                 rows="5"
                 placeholder="What happened? (optional, 1-2 sentences)"
-                class="w-full resize-none rounded-2xl border border-care-sageDark/35 bg-care-cream px-4 py-3 t-body text-care-ink outline-none transition placeholder:text-[#b8a084] focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
+                class="w-full resize-none rounded-2xl border border-care-sageDark/35 bg-care-cream px-4 py-3 t-body-sm text-care-ink outline-none transition placeholder:text-[#b8a084] focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
               ></textarea>
               <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <button
@@ -612,13 +1390,27 @@
               </div>
             </div>
 
-            <div v-if="formError" class="rounded-2xl bg-rose-50 px-4 py-3 t-body-sm text-rose-700">
+            <div v-if="formError" class="rounded-2xl bg-rose-50 px-4 py-3 t-body-sm text-rose-700" role="alert">
               {{ formError }}
+            </div>
+
+            <div
+              v-if="saveSuccess"
+              class="save-success-banner"
+              role="status"
+              aria-live="polite"
+            >
+              <span class="save-success-banner__icon" aria-hidden="true">
+                <svg viewBox="0 0 16 16" fill="none">
+                  <path d="M3.5 8.2 6.4 11l6.1-6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <p class="t-body-sm t-strong">Moment saved</p>
             </div>
 
             <button
               type="submit"
-              class="inline-flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-2xl bg-care-sageDark px-5 py-3 t-body t-strong text-white shadow-sm transition hover:bg-[#416d59] focus:outline-none focus:ring-4 focus:ring-care-sage/35 sm:w-auto"
+              class="inline-flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-2xl bg-care-sageDark px-5 py-3 t-body-sm t-strong text-white shadow-sm transition hover:bg-[#416d59] focus:outline-none focus:ring-4 focus:ring-care-sage/35 sm:w-auto"
             >
               <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M5 12.5 10 17 19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -630,11 +1422,13 @@
 
         <aside class="space-y-6">
           <div class="rounded-[1.5rem] bg-white/78 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
-            <p class="t-kicker text-care-sageDark">Today</p>
-            <h2 class="kicker-gap t-h2 text-care-ink">A lighter handover</h2>
-            <p class="title-gap t-body text-slate-600">
-              Ana can capture what stood out, then bring a short reflection into shift handover without turning it into extra paperwork.
-            </p>
+            <div class="title-block">
+              <p class="t-kicker text-care-sageDark">Today</p>
+              <h2 class="kicker-gap t-h2 text-care-ink">A lighter handover</h2>
+              <p class="title-gap t-body-sm text-slate-600">
+                Ana can capture what stood out, then bring a short reflection into shift handover without turning it into extra paperwork.
+              </p>
+            </div>
             <div class="mt-5 grid gap-3 t-body-sm text-slate-700">
               <div class="flex items-center gap-3 rounded-2xl bg-care-mist px-4 py-3">
                 <span class="h-2.5 w-2.5 rounded-full bg-care-sageDark"></span>
@@ -653,9 +1447,9 @@
 
           <div class="rounded-[1.5rem] bg-white/82 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
             <div class="mb-4 flex items-center justify-between gap-3">
-              <div>
+              <div class="title-block">
                 <p class="t-kicker text-care-sageDark">Residents</p>
-                <h2 class="kicker-gap t-h3 text-care-ink">People behind the pattern</h2>
+                <h3 class="kicker-gap t-h3 text-care-ink">People behind the pattern</h3>
               </div>
               <svg class="float-soft h-12 w-12 text-care-sageDark" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                 <g fill="none">
@@ -673,7 +1467,7 @@
                 :key="resident"
                 class="flex items-center gap-3 rounded-2xl bg-care-mist/80 p-3"
               >
-                <img :src="profileFor(resident).photo" alt="" class="portrait-img h-12 w-12 rounded-xl" />
+                <img :src="profileFor(resident).photo" alt="" class="portrait-img h-12 w-12 rounded-xl" width="48" height="48" loading="lazy" decoding="async" />
                 <div class="min-w-0">
                   <p class="truncate t-body-sm t-strong text-care-ink">{{ resident }}</p>
                   <p class="truncate t-caption t-muted">{{ profileFor(resident).rhythm }}</p>
@@ -689,18 +1483,18 @@
                 <span class="absolute inset-3 rounded-full bg-care-sageDark"></span>
               </div>
               <div>
-                <p class="t-kicker text-care-sageDark">AI reflection engine <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 t-badge text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span></p>
-                <p class="mt-1 t-body text-slate-600">listening for relational cues...</p>
+                <p class="t-kicker text-care-sageDark">AI reflection <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 t-badge text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span></p>
+                <p class="mt-1.5 t-body-sm text-slate-600">listening for relational cues...</p>
               </div>
             </div>
           </div>
 
           <div v-if="latestReflection && !isReflecting" class="rounded-[1.5rem] bg-white p-6 shadow-soft ring-1 ring-care-sage/25">
             <div class="mb-4 flex items-center gap-3">
-              <img :src="profileFor(latestReflection.resident).photo" alt="" class="portrait-img h-12 w-12 rounded-2xl shadow-sm" />
+              <img :src="profileFor(latestReflection.resident).photo" alt="" class="portrait-img h-12 w-12 rounded-2xl shadow-sm" width="48" height="48" loading="lazy" decoding="async" />
               <div>
-                <p class="t-kicker text-care-sageDark">CareWeave AI reflection <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 t-badge text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span></p>
-                <p class="t-caption text-slate-500">{{ latestReflection.resident }} · {{ latestReflection.emotion }}</p>
+                <p class="t-kicker text-care-sageDark">AI reflection <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 t-badge text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span></p>
+                <p class="mt-1 t-caption text-slate-500">{{ latestReflection.resident }} · {{ latestReflection.emotion }}</p>
               </div>
             </div>
             <p class="t-body text-care-ink">{{ latestReflection.aiPrompt }}</p>
@@ -715,10 +1509,10 @@
         </aside>
       </section>
 
-      <section v-if="activeTab === 'History'" class="space-y-6">
+      <section v-show="activeTab === 'History'" class="space-y-6">
         <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
           <div class="history-toolbar">
-            <div>
+            <div class="title-block">
               <p class="t-kicker text-care-sageDark">History</p>
               <h2 class="kicker-gap t-h2 text-care-ink">Recorded moments</h2>
             </div>
@@ -736,17 +1530,17 @@
 
         <div v-if="historyFilter !== 'All'" class="rounded-[1.5rem] border border-care-sage/30 bg-white/90 p-5 shadow-soft sm:p-6">
           <div class="flex items-start gap-4">
-            <img :src="profileFor(historyFilter).photo" alt="" class="portrait-img h-14 w-14 rounded-2xl shadow-sm" />
+            <img :src="profileFor(historyFilter).photo" alt="" class="portrait-img h-14 w-14 rounded-2xl shadow-sm" width="56" height="56" loading="lazy" decoding="async" />
             <div>
-              <p class="t-kicker text-care-sageDark">AI relationship insight <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 t-badge text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span></p>
-              <p class="mt-2 t-body text-care-ink">{{ historyResidentInsight }}</p>
+              <p class="t-kicker text-care-sageDark">Relationship insight <span class="ml-1.5 rounded-full bg-white px-2.5 py-0.5 t-badge text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span></p>
+              <p class="mt-1.5 t-body text-care-ink">{{ historyResidentInsight }}</p>
             </div>
           </div>
         </div>
 
         <div v-if="filteredMoments.length === 0" class="rounded-[1.5rem] bg-white/80 p-10 text-center shadow-soft ring-1 ring-white/80">
           <p class="t-h3 text-care-ink">{{ historyEmptyTitle }}</p>
-          <p class="mt-2 t-body text-slate-600">{{ historyEmptyMessage }}</p>
+          <p class="mt-2 t-body-sm text-slate-600">{{ historyEmptyMessage }}</p>
         </div>
 
         <div v-else class="grid gap-4">
@@ -757,7 +1551,7 @@
           >
             <div class="flex flex-col justify-between gap-3 md:flex-row md:items-start">
               <div class="flex items-center gap-4">
-                <img :src="profileFor(moment.resident).photo" alt="" class="portrait-img h-14 w-14 rounded-2xl shadow-sm" />
+                <img :src="profileFor(moment.resident).photo" alt="" class="portrait-img h-14 w-14 rounded-2xl shadow-sm" width="56" height="56" loading="lazy" decoding="async" />
                 <div>
                   <p class="t-caption t-muted">{{ moment.timestamp }}</p>
                   <h3 class="mt-1 t-h3 text-care-ink">{{ moment.resident }}</h3>
@@ -769,8 +1563,8 @@
             </div>
             <p class="mt-4 t-body text-slate-700">{{ moment.note || 'No brief note added.' }}</p>
             <div class="mt-4 rounded-2xl bg-care-mist px-4 py-4">
-              <p class="t-kicker text-care-sageDark">Reflection prompt</p>
-              <p class="mt-2 t-body text-care-ink">{{ moment.aiPrompt }}</p>
+              <p class="t-kicker text-care-sageDark">Reflection</p>
+              <p class="mt-1.5 t-body text-care-ink">{{ moment.aiPrompt }}</p>
             </div>
           </article>
         </div>
@@ -794,82 +1588,74 @@
         </div>
       </section>
 
-      <section v-if="activeTab === 'Overview'" class="space-y-6">
+      <section v-show="activeTab === 'Overview'" class="space-y-6">
         <div v-if="moments.length === 0" class="rounded-[1.5rem] bg-white/80 p-10 text-center shadow-soft ring-1 ring-white/80">
           <p class="t-h3 text-care-ink">No trend data yet.</p>
-          <p class="mt-2 t-body text-slate-600">Record a few moments to see patterns with care.</p>
+          <p class="mt-2 t-body-sm text-slate-600">Record a few moments to see patterns with care.</p>
         </div>
 
         <div v-else class="space-y-6">
           <div class="grid items-stretch gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
-            <aside class="flex h-full flex-col rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
-              <div class="flex items-center gap-4 rounded-2xl bg-gradient-to-br from-care-mist via-white/40 to-care-blue/15 p-3 ring-1 ring-white/80">
-                <img :src="selectedTrendProfile.photo" alt="" class="portrait-img h-20 w-20 rounded-[1.35rem] shadow-sm ring-2 ring-white" />
-                <div class="min-w-0">
-                  <p class="t-kicker text-care-sageDark">Smart resident focus</p>
+            <aside class="focus-panel panel-surface">
+              <!-- 1. Who: identity -->
+              <div class="focus-panel__id">
+                <img
+                  :src="selectedTrendProfile.photo"
+                  alt=""
+                  class="focus-panel__photo"
+                  width="72"
+                  height="72"
+                  decoding="async"
+                  fetchpriority="high"
+                />
+                <div class="title-block min-w-0">
+                  <p class="t-kicker text-care-sageDark">Focus</p>
                   <h3 class="kicker-gap truncate t-h3 text-care-ink">{{ selectedTrendResident }}</h3>
-                  <p class="title-gap t-caption text-slate-600">{{ selectedTrendProfile.country }}</p>
+                  <p class="title-gap t-caption t-muted">{{ selectedTrendProfile.country }}</p>
                 </div>
               </div>
 
-              <div class="mt-5">
-                <label for="trendResident" class="block t-body-sm t-strong text-slate-700">Track resident</label>
-                <select
-                  id="trendResident"
-                  v-model="selectedTrendResident"
-                  class="mt-2 w-full rounded-2xl border border-care-sageDark/35 bg-care-cream px-4 py-3 t-body text-care-ink outline-none transition focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
-                >
+              <!-- 2. Control -->
+              <div class="focus-panel__control">
+                <label for="trendResident" class="t-body-sm t-strong text-slate-700">Track resident</label>
+                <select id="trendResident" v-model="selectedTrendResident">
                   <option value="All residents">All residents</option>
                   <option v-for="resident in residents" :key="resident" :value="resident">{{ resident }}</option>
                 </select>
               </div>
 
-              <div class="mt-5 space-y-2.5 t-body-sm text-slate-700">
-                <div class="flex items-start gap-3 rounded-2xl bg-care-mist px-4 py-3">
-                  <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white/80 text-care-sageDark ring-1 ring-care-sage/25">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M3 10l9-7 9 7"/><path d="M5 9v11h14V9"/><path d="M10 20v-6h4v6"/></svg>
-                  </span>
-                  <div class="min-w-0">
-                    <p class="t-kicker text-care-sageDark">Room or place</p>
-                    <p class="mt-0.5 t-body-sm t-strong text-care-ink">{{ selectedTrendProfile.room }}</p>
-                  </div>
+              <!-- 3. Facts: label | value rows -->
+              <dl class="focus-panel__meta">
+                <div class="focus-panel__row">
+                  <dt>Room</dt>
+                  <dd>{{ selectedTrendProfile.room }}</dd>
                 </div>
-                <div class="flex items-start gap-3 rounded-2xl bg-care-mist px-4 py-3">
-                  <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white/80 text-care-sageDark ring-1 ring-care-sage/25">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                  </span>
-                  <div class="min-w-0">
-                    <p class="t-kicker text-care-sageDark">Known rhythm</p>
-                    <p class="mt-0.5 t-body-sm t-strong text-care-ink">{{ selectedTrendProfile.rhythm }}</p>
-                  </div>
+                <div class="focus-panel__row">
+                  <dt>Rhythm</dt>
+                  <dd>{{ selectedTrendProfile.rhythm }}</dd>
                 </div>
-                <div v-if="latestTrendMoment" class="flex items-start gap-3 rounded-2xl bg-care-cream px-4 py-3 ring-1 ring-care-sage/20">
-                  <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white/80 text-care-sageDark ring-1 ring-care-sage/25">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M5 4h14l-1 7H6L5 4z"/><path d="M5 11l1 9h12l1-9"/><path d="M9 4V2h6v2"/></svg>
-                  </span>
-                  <div class="min-w-0">
-                    <p class="t-kicker text-care-sageDark">Latest moment</p>
-                    <p class="mt-0.5 truncate t-body-sm t-strong text-care-ink">{{ latestTrendMoment.emotion }}</p>
-                    <p class="t-caption t-muted">{{ latestTrendMoment.timestamp }}</p>
-                  </div>
+                <div v-if="latestTrendMoment" class="focus-panel__row is-latest">
+                  <dt>Latest</dt>
+                  <dd>
+                    {{ latestTrendMoment.emotion }}
+                    <span class="focus-panel__time">{{ latestTrendMoment.timestamp }}</span>
+                  </dd>
                 </div>
-              </div>
+              </dl>
 
-              <div class="mt-auto pt-5">
-                <div class="flex items-start gap-2.5 rounded-2xl border border-care-sage/30 bg-care-mist/70 px-4 py-3 t-caption t-muted">
-                  <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/80 text-care-sageDark ring-1 ring-care-sage/30">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-                  </span>
-                  <span>Lines and chips are prompts for reflection, not diagnoses. A rise or dip is a reason to pause with context, not to judge or optimise a number.</span>
-                </div>
+              <!-- 4. Guardrail (lowest weight) -->
+              <div class="focus-panel__note">
+                <p class="focus-panel__note-inner">
+                  Lines and chips are prompts for reflection, not diagnoses. A rise or dip is a reason to pause with context, not to judge or optimise a number.
+                </p>
               </div>
             </aside>
 
-            <div class="flex h-full flex-col rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
+            <div class="tone-panel panel-surface">
               <div class="flex flex-col justify-between gap-3 md:flex-row md:items-start">
-                <div>
-                  <p class="t-kicker text-care-sageDark">7-Day Emotional Tone Tracker</p>
-                  <h3 class="kicker-gap t-h3 text-care-ink">{{ selectedTrendResident }}</h3>
+                <div class="title-block">
+                  <p class="t-kicker text-care-sageDark">7-day tone</p>
+                  <h3 class="kicker-gap t-h3 text-care-ink">Emotional tone tracker · {{ selectedTrendResident }}</h3>
                   <p class="title-gap t-caption t-muted">{{ selectedTrendResident === 'All residents' ? 'A soft tone line across the whole home, with emotion traces kept visible in the background.' : 'A soft tone line over the past week, with emotion traces kept visible in the background.' }}</p>
                 </div>
               </div>
@@ -891,7 +1677,7 @@
                   class="rounded-2xl border border-care-sage/20 bg-care-mist/70 px-4 py-3"
                 >
                   <p class="t-kicker text-care-sageDark">{{ milestone.label }}</p>
-                  <p class="mt-1 t-body-sm text-care-ink">{{ milestone.text }}</p>
+                  <p class="mt-1.5 t-body-sm text-care-ink">{{ milestone.text }}</p>
                 </div>
               </div>
 
@@ -903,9 +1689,9 @@
             <div class="grid gap-5 lg:grid-cols-5">
               <div class="flex flex-col rounded-2xl bg-care-mist/60 p-4 ring-1 ring-care-sage/20 sm:p-5 lg:col-span-3">
                 <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-care-sage/20 pb-3">
-                  <div>
+                  <div class="title-block">
                     <p class="t-kicker text-care-sageDark">24-hour rhythm</p>
-                    <p class="mt-0.5 t-caption t-muted">Petal colour = dominant emotion · length = how often</p>
+                    <p class="title-gap t-caption t-muted">Petal colour = dominant emotion · length = how often</p>
                   </div>
                   <p class="t-caption t-strong text-care-ink">{{ selectedTrendResident === 'All residents' ? 'Whole home' : selectedTrendResident }} · circadian view</p>
                 </div>
@@ -918,12 +1704,14 @@
               </div>
 
               <div class="flex flex-col gap-3 lg:col-span-2">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                  <p class="t-kicker text-care-sageDark">Circadian View · 24-hour Polar Clock</p>
-                  <span class="data-mode-toggle"><span class="dot"></span>Demo data</span>
-                </div>
-                  <h3 class="kicker-gap t-h3 text-care-ink">When emotional moments appear across the day</h3>
+                <div class="title-block">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <p class="t-kicker text-care-sageDark">Circadian view</p>
+                    <span class="data-mode-toggle"><span class="dot"></span>Demo data</span>
+                  </div>
+                  <h3 class="kicker-gap t-h3 text-care-ink">When moments appear across the day</h3>
                   <p class="title-gap t-body-sm t-muted">Radial 30-minute bins. Petal colour = dominant emotion at that hour, length = how often it was observed.</p>
+                </div>
 
                 <div class="mt-1 grid gap-2.5">
                   <div class="rounded-2xl border border-care-sage/25 bg-care-mist/60 px-4 py-3">
@@ -931,21 +1719,21 @@
                       <p class="t-kicker text-care-sageDark">Morning</p>
                       <span class="rounded-full bg-white/70 px-2 py-0.5 t-badge text-care-sageDark">06 – 11</span>
                     </div>
-                    <p class="mt-1.5 t-body-sm text-care-ink">{{ circadianPeriodSummary('morning') }}</p>
+                    <p class="mt-1 t-body-sm text-care-ink">{{ circadianPeriodSummaries.morning }}</p>
                   </div>
                   <div class="rounded-2xl border border-care-sage/25 bg-care-mist/60 px-4 py-3">
                     <div class="flex items-center justify-between gap-2">
-                      <p class="t-kicker text-care-sageDark">Sundown window</p>
+                      <p class="t-kicker text-care-sageDark">Sundown</p>
                       <span class="rounded-full bg-white/70 px-2 py-0.5 t-badge text-care-sageDark">15 – 19</span>
                     </div>
-                    <p class="mt-1.5 t-body-sm text-care-ink">{{ circadianPeriodSummary('sundown') }}</p>
+                    <p class="mt-1 t-body-sm text-care-ink">{{ circadianPeriodSummaries.sundown }}</p>
                   </div>
                   <div class="rounded-2xl border border-care-sage/25 bg-care-mist/60 px-4 py-3">
                     <div class="flex items-center justify-between gap-2">
-                      <p class="t-kicker text-care-sageDark">Evening &amp; night</p>
+                      <p class="t-kicker text-care-sageDark">Evening</p>
                       <span class="rounded-full bg-white/70 px-2 py-0.5 t-badge text-care-sageDark">20 – 05</span>
                     </div>
-                    <p class="mt-1.5 t-body-sm text-care-ink">{{ circadianPeriodSummary('evening') }}</p>
+                    <p class="mt-1 t-body-sm text-care-ink">{{ circadianPeriodSummaries.evening }}</p>
                   </div>
                 </div>
 
@@ -962,8 +1750,8 @@
 
           <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
             <div class="mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
-              <div>
-                <p class="t-kicker text-care-sageDark">Contextual Emotion Map</p>
+              <div class="title-block">
+                <p class="t-kicker text-care-sageDark">Context map</p>
                 <h3 class="kicker-gap t-h3 text-care-ink">Emotional moments in daily care routines</h3>
                 <p class="title-gap max-w-3xl t-body-sm t-muted">
                   A softer view of where emotional moments appear, shown as prompts for team reflection rather than fixed labels.
@@ -976,13 +1764,13 @@
 
             <div class="overflow-x-auto soft-scrollbar pb-2">
               <div class="min-w-[42rem] space-y-2">
-                <div class="grid grid-cols-[10rem_repeat(5,minmax(5.75rem,1fr))] gap-2 px-2 t-kicker text-slate-400">
+                <div class="grid grid-cols-[10rem_repeat(5,minmax(5.75rem,1fr))] gap-2 px-2 t-caption t-strong text-slate-500">
                   <span>Context</span>
                   <span v-for="emotion in emotions" :key="emotion" class="flex min-w-0 flex-col items-center gap-1.5 text-center" :title="emotion">
                     <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full" :style="emotionIconStyle(emotion)">
                       <img class="block h-4 w-4" :src="emotionVisual(emotion).icon" alt="" />
                     </span>
-                    <span class="block w-full t-kicker text-slate-500 truncate">{{ emotion }}</span>
+                    <span class="block w-full truncate t-caption text-slate-500">{{ emotion }}</span>
                   </span>
                 </div>
                 <div
@@ -1010,47 +1798,40 @@
             </div>
 
             <div class="mt-5 rounded-[1.25rem] border border-care-sage/25 bg-care-mist/70 px-5 py-4">
-              <p class="t-kicker text-care-sageDark">Read this pattern with care</p>
-              <p class="mt-2 t-body text-care-ink">{{ contextGuardrail }}</p>
+              <p class="t-kicker text-care-sageDark">Read with care</p>
+              <p class="mt-1.5 t-body text-care-ink">{{ contextGuardrail }}</p>
             </div>
           </div>
 
-          <div class="ai-sheen rounded-[1.5rem] border border-care-sage/35 bg-gradient-to-br from-white via-[#f7fbf8] to-care-mist p-5 shadow-soft sm:p-6">
-            <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-              <div class="flex items-start gap-4">
-                <div class="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-care-sageDark text-white shadow-sm">
-                  <span class="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-emerald-300 pulse-soft"></span>
-                  <svg class="h-7 w-7" viewBox="-5 -10 110 135" fill="currentColor" aria-hidden="true">
-                    <path d="m92.039 57.914-19.637-9.5352c-0.92188-0.44922-1.668-1.1953-2.1172-2.1172l-9.5352-19.637c-0.43359-0.89453-1.7109-0.89453-2.1445 0l-9.5352 19.637c-0.44922 0.92188-1.1953 1.668-2.1172 2.1172l-19.637 9.5352c-0.89453 0.43359-0.89453 1.7109 0 2.1445l19.637 9.5352c0.92188 0.44922 1.668 1.1953 2.1172 2.1172l9.5352 19.637c0.43359 0.89453 1.7109 0.89453 2.1445 0l9.5352-19.637c0.44922-0.92188 1.1953-1.668 2.1172-2.1172l19.637-9.5352c0.89453-0.43359 0.89453-1.7109 0-2.1445z"/>
-                    <path d="m9.3438 28.258 10.328 5.0156c0.92188 0.44922 1.668 1.1953 2.1172 2.1172l5.0156 10.328c0.43359 0.89453 1.7109 0.89453 2.1445 0l5.0156-10.328c0.44922-0.92188 1.1953-1.668 2.1172-2.1172l10.328-5.0156c0.89453-0.43359 0.89453-1.7109 0-2.1445l-10.328-5.0156c-0.92188-0.44922-1.668-1.1953-2.1172-2.1172l-5.0156-10.328c-0.43359-0.89453-1.7109-0.89453-2.1445 0l-5.0156 10.328c-0.44922 0.92188-1.1953 1.668-2.1172 2.1172l-10.328 5.0156c-0.89453 0.43359-0.89453 1.7109 0 2.1445z"/>
-                    <path d="m29.816 75.891-5.2109-2.5312c-0.92188-0.44922-1.668-1.1953-2.1172-2.1172l-2.5312-5.2109c-0.43359-0.89453-1.7109-0.89453-2.1445 0l-2.5312 5.2109c-0.44922 0.92187-1.1953 1.668-2.1172 2.1172l-5.2109 2.5312c-0.89453 0.43359-0.89453 1.7109 0 2.1445l5.2109 2.5312c0.92188 0.44922 1.668 1.1953 2.1172 2.1172l2.5312 5.2109c0.43359 0.89453 1.7109 0.89453 2.1445 0l2.5312-5.2109c0.44922-0.92188 1.1953-1.668 2.1172-2.1172l5.2109-2.5312c0.89453-0.43359 0.89453-1.7109 0-2.1445z"/>
-                  </svg>
-                </div>
-                <div>
-                  <div class="flex flex-wrap items-center gap-2">
-                    <p class="t-kicker text-care-sageDark">CareWeave AI insight</p>
-                    <span class="rounded-full bg-white px-3 py-1 t-badge text-care-sageDark shadow-sm border border-care-sage/40">AI-Powered</span>
-                  </div>
-                  <p class="mt-2 t-body text-care-ink">{{ overviewInsight }}</p>
-                </div>
+          <section class="insight-panel" aria-label="AI insight">
+            <header class="insight-panel__head">
+              <div class="insight-panel__brand">
+                <p class="t-kicker text-care-sageDark">AI insight</p>
+                <span class="insight-panel__badge">AI-Powered</span>
+                <p class="insight-panel__hint">Handover prompt · not a diagnosis</p>
               </div>
-              <div class="grid min-w-[14rem] gap-2 t-body-sm text-slate-700 sm:grid-cols-2 lg:grid-cols-1">
-                <div class="rounded-2xl bg-white/78 px-4 py-3">
-                  <span class="t-strong text-care-ink">Signals scanned:</span> {{ moments.length }}
-                </div>
-                <div class="rounded-2xl bg-white/78 px-4 py-3">
-                  <span class="t-strong text-care-ink">Focus:</span> {{ selectedTrendResident }}
-                </div>
-              </div>
+            </header>
+
+            <p class="insight-panel__body">{{ overviewInsight }}</p>
+
+            <div class="insight-panel__meta">
+              <span class="insight-panel__stat">
+                Signals <strong>{{ moments.length }}</strong>
+              </span>
+              <span class="insight-panel__stat">
+                Focus <strong>{{ selectedTrendResident }}</strong>
+              </span>
             </div>
-          </div>
+          </section>
 
           <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-7">
-            <p class="t-kicker text-care-sageDark">Overview</p>
-            <h2 class="kicker-gap t-h2 text-care-ink">Emotion trends this week</h2>
-            <p class="title-gap max-w-3xl t-body text-slate-600">
-              A gentle view of recent relational care moments across morning tea, garden time, reminiscence groups, and shift handovers.
-            </p>
+            <div class="title-block">
+              <p class="t-kicker text-care-sageDark">Overview</p>
+              <h2 class="kicker-gap t-h2 text-care-ink">Emotion trends this week</h2>
+              <p class="title-gap max-w-3xl t-body-sm text-slate-600">
+                A gentle view of recent relational care moments across morning tea, garden time, reminiscence groups, and shift handovers.
+              </p>
+            </div>
           </div>
 
           <div class="grid gap-5 lg:grid-cols-5">
@@ -1061,10 +1842,10 @@
                 </div>
                 <div class="mt-3 lg:mt-0 lg:flex lg:flex-1 lg:items-center lg:justify-between lg:gap-3">
                   <div>
-                    <p class="t-kicker text-care-sageDark">Positive signals</p>
+                    <p class="t-kicker text-care-sageDark">Positive</p>
                     <p class="mt-1 t-body-sm t-muted">Warm or quietly settled moments.</p>
                   </div>
-                  <p class="mt-2 t-display t-num text-care-ink lg:mt-0">{{ positiveCount }}</p>
+                  <p class="mt-1.5 t-display t-num text-care-ink lg:mt-0">{{ positiveCount }}</p>
                 </div>
               </div>
               <div class="rounded-2xl bg-white/88 p-4 shadow-soft ring-1 ring-white/80 lg:flex lg:items-center lg:gap-4 lg:py-3.5">
@@ -1073,10 +1854,10 @@
                 </div>
                 <div class="mt-3 lg:mt-0 lg:flex lg:flex-1 lg:items-center lg:justify-between lg:gap-3">
                   <div>
-                    <p class="t-kicker text-care-sageDark">Needs noticing</p>
+                    <p class="t-kicker text-care-sageDark">Needs notice</p>
                     <p class="mt-1 t-body-sm t-muted">Low, restless, or tearful moments.</p>
                   </div>
-                  <p class="mt-2 t-display t-num text-care-ink lg:mt-0">{{ supportCount }}</p>
+                  <p class="mt-1.5 t-display t-num text-care-ink lg:mt-0">{{ supportCount }}</p>
                 </div>
               </div>
               <div class="rounded-2xl bg-white/88 p-4 shadow-soft ring-1 ring-white/80 lg:flex lg:items-center lg:gap-4 lg:py-3.5">
@@ -1088,15 +1869,18 @@
                     <p class="t-kicker text-care-sageDark">Most observed</p>
                     <p class="mt-1 t-body-sm t-muted">{{ mostActiveResident.count }} moments this week.</p>
                   </div>
-                  <p class="mt-2 t-h3 text-care-ink lg:mt-0 lg:text-right">{{ mostActiveResident.resident }}</p>
+                  <p class="mt-1.5 t-h3 text-care-ink lg:mt-0 lg:text-right">{{ mostActiveResident.resident }}</p>
                 </div>
               </div>
             </div>
 
             <div class="rounded-[1.5rem] bg-white/88 p-4 shadow-soft ring-1 ring-white/80 sm:p-5 lg:col-span-2">
               <div class="mb-3">
-                <h3 class="t-h3 text-care-ink">Emotion Distribution This Week</h3>
-                <p class="mt-1 t-caption t-muted">{{ moments.length }} recorded moments</p>
+                <div class="title-block">
+                  <p class="t-kicker text-care-sageDark">Distribution</p>
+                  <h3 class="kicker-gap t-h3 text-care-ink">Emotion tags this week</h3>
+                  <p class="title-gap t-caption t-muted">{{ moments.length }} recorded moments</p>
+                </div>
               </div>
               <div class="chart-wrap">
                 <canvas ref="emotionChart" aria-label="Emotion distribution doughnut chart"></canvas>
@@ -1162,7 +1946,7 @@
             country: 'Ireland',
             room: 'Willow room',
             rhythm: 'Morning tea, window seat, Irish folk songs',
-            photo: 'assets/portraits/mrs-osullivan.png',
+            photo: 'assets/portraits/thumbs/mrs-osullivan.webp',
             accent: '#8fb5a1',
             hair: '#d8d0bf',
             skin: '#f0c9a5',
@@ -1173,7 +1957,7 @@
             country: 'Sweden',
             room: 'Birch room',
             rhythm: 'Newspaper, quiet lunch, garden path',
-            photo: 'assets/portraits/mr-johansson.png',
+            photo: 'assets/portraits/thumbs/mr-johansson.webp',
             accent: '#7d9dbb',
             hair: '#c4c9c6',
             skin: '#e9bd93',
@@ -1184,7 +1968,7 @@
             country: 'Italy',
             room: 'Olive room',
             rhythm: 'Music, herbs, folding linen together',
-            photo: 'assets/portraits/signora-rossi.png',
+            photo: 'assets/portraits/thumbs/signora-rossi.webp',
             accent: '#c8aa83',
             hair: '#6f5547',
             skin: '#dfae86',
@@ -1195,7 +1979,7 @@
             country: 'Germany',
             room: 'Maple room',
             rhythm: 'Work bag, coat by the door, early breakfast',
-            photo: 'assets/portraits/herr-weber.png',
+            photo: 'assets/portraits/thumbs/herr-weber.webp',
             accent: '#6aa6a5',
             hair: '#b2b0a5',
             skin: '#e7bc91',
@@ -1206,7 +1990,7 @@
             country: 'France',
             room: 'Rose room',
             rhythm: 'Napkins, soft dining room, stories of Lyon',
-            photo: 'assets/portraits/madame-dubois.png',
+            photo: 'assets/portraits/thumbs/madame-dubois.webp',
             accent: '#c69aa9',
             hair: '#c8c2ba',
             skin: '#ecc29a',
@@ -1292,6 +2076,12 @@
           trendChart: null,
           chartRenderFrame: null,
           chartRenderRequestId: 0,
+          // [Perf] Debounce window resize so Polar Clock is not fully rebuilt
+          // on every mousemove-pixel during a drag-resize.
+          chartResizeTimer: null,
+          // [Perf #6] When Overview is hidden (v-show), mark dirty and refresh
+          // charts only when the user returns — avoids 0-width canvas paints.
+          chartsDirty: true,
           historyFilter: 'Signora Rossi',
           historyDateFrom: '2026-05-06',
           historyDateTo: '2026-05-19',
@@ -1303,6 +2093,9 @@
           latestReflection: null,
           feedbackMessage: '',
           formError: '',
+          // Shown after a successful Save moment (toast + inline banner).
+          saveSuccess: null,
+          saveSuccessTimer: null,
           form: {
             resident: '',
             emotion: '',
@@ -1948,7 +2741,7 @@
               country: 'Whole home',
               room: 'All households',
               rhythm: 'Shared patterns across the week',
-              photo: 'assets/portraits/all-residents-care-home.png',
+              photo: 'assets/portraits/thumbs/all-residents-care-home.webp',
               accent: '#6aa6a5',
               hair: '#b8c9c2',
               skin: '#eec8a5',
@@ -1957,19 +2750,40 @@
           }
           return this.residentProfiles[this.selectedTrendResident] || this.residentProfiles[this.residents[0]];
         },
+        // selectedTrendMoments is already sorted ascending — latest is the last item.
         latestTrendMoment() {
-          return [...this.selectedTrendMoments].sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0] || null;
+          const list = this.selectedTrendMoments;
+          return list.length ? list[list.length - 1] : null;
+        },
+        // [Perf #5] One pass over moments for the three Overview KPI cards.
+        momentToneStats() {
+          const POSITIVE = new Set(['Warm connection', 'Quietly settled']);
+          const SUPPORT = new Set(['Withdrawn / low', 'Agitated / restless', 'Tearful / emotional']);
+          let positive = 0;
+          let support = 0;
+          const byResident = Object.fromEntries(this.residents.map(r => [r, 0]));
+          for (const moment of this.moments) {
+            if (POSITIVE.has(moment.emotion)) positive += 1;
+            if (SUPPORT.has(moment.emotion)) support += 1;
+            if (byResident[moment.resident] !== undefined) {
+              byResident[moment.resident] += 1;
+            }
+          }
+          let mostActive = { resident: this.residents[0] || '', count: 0 };
+          for (const resident of this.residents) {
+            const count = byResident[resident] || 0;
+            if (count > mostActive.count) mostActive = { resident, count };
+          }
+          return { positive, support, mostActive };
         },
         positiveCount() {
-          return this.moments.filter(moment => ['Warm connection', 'Quietly settled'].includes(moment.emotion)).length;
+          return this.momentToneStats.positive;
         },
         supportCount() {
-          return this.moments.filter(moment => ['Withdrawn / low', 'Agitated / restless', 'Tearful / emotional'].includes(moment.emotion)).length;
+          return this.momentToneStats.support;
         },
         mostActiveResident() {
-          return this.residents
-            .map(resident => ({ resident, count: this.moments.filter(moment => moment.resident === resident).length }))
-            .sort((a, b) => b.count - a.count)[0];
+          return this.momentToneStats.mostActive;
         },
         overviewInsight() {
           const recent = this.lastNDaysMoments(7);
@@ -2050,6 +2864,7 @@
         contextMapScope() {
           return this.selectedTrendResident === 'All residents' ? 'Whole home · last 7 days' : `${this.selectedTrendResident} · last 7 days`;
         },
+        // [Perf #5] Single pass: bucket each moment once, then emit rows.
         contextEmotionMap() {
           const labels = [
             ...this.contextRules.map(rule => rule.label),
@@ -2057,18 +2872,35 @@
             'Afternoon rhythm',
             'Evening rhythm'
           ];
+          const rows = Object.fromEntries(labels.map(label => [
+            label,
+            {
+              label,
+              total: 0,
+              counts: Object.fromEntries(this.emotions.map(e => [e, 0]))
+            }
+          ]));
+
+          for (const moment of this.contextMapMoments) {
+            const label = this.contextForMoment(moment);
+            const row = rows[label];
+            if (!row) continue;
+            row.total += 1;
+            if (row.counts[moment.emotion] !== undefined) {
+              row.counts[moment.emotion] += 1;
+            }
+          }
 
           return labels
             .map(label => {
-              const entries = this.contextMapMoments.filter(moment => this.contextForMoment(moment) === label);
-              const cells = this.emotions.map(emotion => ({
-                emotion,
-                count: entries.filter(moment => moment.emotion === emotion).length
-              }));
+              const row = rows[label];
               return {
                 label,
-                total: entries.length,
-                cells
+                total: row.total,
+                cells: this.emotions.map(emotion => ({
+                  emotion,
+                  count: row.counts[emotion]
+                }))
               };
             })
             .filter(row => row.total > 0);
@@ -2089,12 +2921,20 @@
 
           return `${phrase}. This may be useful for shift discussion, but it should not be read as a fixed trait of any resident. Context, environment, and staff knowledge still matter.`;
         },
+        // [Perf #5] Group emotions per resident in one pass (no N×filter).
         gentleHighlights() {
+          const hard = new Set(['Withdrawn / low', 'Agitated / restless']);
+          const byResident = Object.fromEntries(this.residents.map(r => [r, []]));
+          for (const moment of this.moments) {
+            if (byResident[moment.resident]) {
+              byResident[moment.resident].push(moment.emotion);
+            }
+          }
           return this.residents
             .map(resident => {
-              const entries = this.moments.filter(moment => moment.resident === resident);
-              if (entries.length >= 2 && entries.every(moment => ['Withdrawn / low', 'Agitated / restless'].includes(moment.emotion))) {
-                const tone = entries.some(moment => moment.emotion === 'Withdrawn / low') ? 'low moments' : 'unsettled moments';
+              const entries = byResident[resident];
+              if (entries.length >= 2 && entries.every(emotion => hard.has(emotion))) {
+                const tone = entries.some(emotion => emotion === 'Withdrawn / low') ? 'low moments' : 'unsettled moments';
                 return `${resident} has had several ${tone} this week. You might want to mention it at handover.`;
               }
               return '';
@@ -2111,30 +2951,35 @@
             }))
           ];
         },
+        // [Perf #5] One scan for highest / lowest / most-observed (no 3× sort+clone).
         trendMilestones() {
           const trend = this.trendSeries.filter(point => point.total > 0 && point.toneScore !== null);
           if (!trend.length) return [];
 
-          const highest = [...trend].sort((a, b) => b.toneScore - a.toneScore)[0];
-          const lowest = [...trend].sort((a, b) => a.toneScore - b.toneScore)[0];
-          const mostObserved = [...trend].sort((a, b) => b.total - a.total)[0];
+          let highest = trend[0];
+          let lowest = trend[0];
+          let mostObserved = trend[0];
+          for (let i = 1; i < trend.length; i++) {
+            const point = trend[i];
+            if (point.toneScore > highest.toneScore) highest = point;
+            if (point.toneScore < lowest.toneScore) lowest = point;
+            if (point.total > mostObserved.total) mostObserved = point;
+          }
           const items = [];
 
-          if (highest) {
-            items.push({
-              label: 'Gentlest lift',
-              text: `${highest.label} leans toward ${highest.dominantEmotion.toLowerCase()}. What helped make those moments possible?`
-            });
-          }
+          items.push({
+            label: 'Gentlest lift',
+            text: `${highest.label} leans toward ${highest.dominantEmotion.toLowerCase()}. What helped make those moments possible?`
+          });
 
-          if (lowest && lowest.label !== highest.label) {
+          if (lowest.label !== highest.label) {
             items.push({
               label: 'Needs context',
               text: `${lowest.label} sits lower on the tone line. What changed in routine, place, or staffing that day?`
             });
           }
 
-          if (mostObserved && !items.some(item => item.text.includes(mostObserved.label))) {
+          if (!items.some(item => item.text.includes(mostObserved.label))) {
             items.push({
               label: 'Most observed',
               text: `${mostObserved.label} has ${mostObserved.total} recorded moment${mostObserved.total === 1 ? '' : 's'} — enough to discuss gently at handover.`
@@ -2186,6 +3031,62 @@
           const attentionNote = avgCount < 1 ? ' Recording frequency is low — consider increasing touchpoints.' : '';
 
           return `${scope === 'the home' ? 'The home' : scope} shows a balanced mix of emotions this week.${attentionNote}`;
+        },
+        // [Perf] polarBins was a method re-run from renderPolarClock + three
+        // circadianPeriodSummary() template calls (4× per Overview paint).
+        // As a computed it caches until selectedTrendMoments / emotions change.
+        polarBins() {
+          const BINS = 48; // 30-minute bins
+          const bins = Array.from({ length: BINS }, (_, i) => ({
+            index: i,
+            startMinutes: i * (1440 / BINS),
+            counts: Object.fromEntries(this.emotions.map(e => [e, 0])),
+            total: 0,
+            tone: 0
+          }));
+          const moments = this.selectedTrendMoments;
+          moments.forEach(m => {
+            const d = this.parseMomentDate(m);
+            const minutes = d.getHours() * 60 + d.getMinutes();
+            const idx = Math.min(BINS - 1, Math.floor(minutes / (1440 / BINS)));
+            bins[idx].counts[m.emotion] += 1;
+            bins[idx].total += 1;
+            bins[idx].tone += this.emotionTone(m.emotion);
+          });
+          bins.forEach(b => {
+            if (b.total) b.tone = b.tone / b.total;
+            b.dominant = this.emotions
+              .map(e => ({ e, c: b.counts[e] }))
+              .sort((a, b2) => b2.c - a.c)[0];
+          });
+          return bins;
+        },
+        // [Perf] One pass over polarBins for all three period cards.
+        circadianPeriodSummaries() {
+          const bins = this.polarBins;
+          const make = (period, start, end) => {
+            const slice = bins.filter(b => {
+              const h = b.startMinutes / 60;
+              return h >= start && h < end;
+            });
+            const total = slice.reduce((s, b) => s + b.total, 0);
+            if (!total) return 'No moments captured in this window yet.';
+            const tally = Object.fromEntries(this.emotions.map(e => [e, 0]));
+            slice.forEach(b => this.emotions.forEach(e => { tally[e] += b.counts[e]; }));
+            const sorted = this.emotions.map(e => ({ e, c: tally[e] })).sort((a, b) => b.c - a.c);
+            const top = sorted[0];
+            if (!top || !top.c) return 'No moments captured in this window yet.';
+            const share = Math.round((top.c / total) * 100);
+            if (period === 'sundown' && (top.e === 'Agitated / restless' || top.e === 'Tearful / emotional')) {
+              return `${top.c}/${total} moments lean ${top.e.toLowerCase()} (${share}%) — worth checking against the sundowning literature.`;
+            }
+            return `${top.e} dominates (${top.c}/${total}, ${share}%).`;
+          };
+          return {
+            morning: make('morning', 6, 12),
+            sundown: make('sundown', 15, 19),
+            evening: make('evening', 19, 24)
+          };
         }
       },
       watch: {
@@ -2193,12 +3094,16 @@
         // saveMoment() (never mutated in place), so a shallow watch on the
         // array reference / length is enough and avoids a deep diff on every
         // Vue patch cycle.
+        // [Perf #6] If Overview is hidden, only mark dirty — re-render when
+        // the user comes back (avoids painting into display:none / 0-width).
         moments() {
+          this.chartsDirty = true;
           if (this.activeTab === 'Overview') {
             this.scheduleChartRender();
           }
         },
         selectedTrendResident() {
+          this.chartsDirty = true;
           if (this.activeTab === 'Overview') {
             this.scheduleChartRender();
           }
@@ -2219,22 +3124,40 @@
         }
       },
       mounted() {
-        window.addEventListener('resize', this.resizeCharts);
+        // Bound once so removeEventListener matches the same reference.
+        this._onWindowResize = () => this.scheduleChartResize();
+        window.addEventListener('resize', this._onWindowResize);
         if (this.activeTab === 'Overview') {
           this.scheduleChartRender();
         }
       },
       beforeUnmount() {
-        window.removeEventListener('resize', this.resizeCharts);
+        if (this._onWindowResize) {
+          window.removeEventListener('resize', this._onWindowResize);
+        }
+        if (this.chartResizeTimer) {
+          clearTimeout(this.chartResizeTimer);
+          this.chartResizeTimer = null;
+        }
+        if (this.saveSuccessTimer) {
+          clearTimeout(this.saveSuccessTimer);
+          this.saveSuccessTimer = null;
+        }
         this.destroyCharts();
       },
       methods: {
         setTab(tab) {
           this.activeTab = tab;
+          // [Perf #6] Keep chart instances alive across tabs (v-show). Only
+          // refresh data if dirty; otherwise just resize after becoming visible.
           if (tab === 'Overview') {
-            this.scheduleChartRender();
-          } else {
-            this.destroyCharts();
+            this.$nextTick(() => {
+              if (this.chartsDirty || !this.emotionChart || !this.trendChart) {
+                this.scheduleChartRender();
+              } else {
+                this.resizeCharts();
+              }
+            });
           }
         },
         scheduleChartRender() {
@@ -2249,6 +3172,7 @@
               if (requestId !== this.chartRenderRequestId || this.activeTab !== 'Overview') return;
               this.chartRenderFrame = null;
               this.renderCharts();
+              this.chartsDirty = false;
             });
           });
         },
@@ -2302,11 +3226,23 @@
           this.suggestionMessage = '';
           this.isReflecting = true;
           this.form = { resident: '', emotion: '', note: '' };
+          this.showSaveSuccess(moment);
 
           setTimeout(() => {
             this.latestReflection = moment;
             this.isReflecting = false;
           }, 1200);
+        },
+        showSaveSuccess(moment) {
+          if (this.saveSuccessTimer) {
+            clearTimeout(this.saveSuccessTimer);
+            this.saveSuccessTimer = null;
+          }
+          this.saveSuccess = true;
+          this.saveSuccessTimer = setTimeout(() => {
+            this.saveSuccess = null;
+            this.saveSuccessTimer = null;
+          }, 3800);
         },
         giveFeedback() {
           this.feedbackMessage = 'Thanks for helping us improve';
@@ -2340,6 +3276,18 @@
             color: visual.iconColor,
             backgroundColor: visual.light,
             border: `1px solid ${visual.dark}33`
+          };
+        },
+        // CSS variables for the Record emotion picker chips.
+        emotionChipVars(emotion) {
+          const visual = this.emotionVisual(emotion);
+          return {
+            '--emo-bg': visual.light,
+            '--emo-mid': visual.mid,
+            '--emo-border': `${visual.dark}40`,
+            '--emo-border-strong': visual.dark,
+            '--emo-text': visual.iconColor,
+            '--emo-icon-fg': visual.iconColor
           };
         },
         contextColor(emotion) {
@@ -2425,37 +3373,12 @@
         //  Real research data sources that fit this view: actigraphy bins,
         //  HRV summaries, BPSD episode logs (Cohen-Mansfield Agitation
         //  Inventory entries with timestamps), nurse-shift observations.
-        //  Bin granularity is fixed at 30 min (48 bins) — change BINS to
-        //  switch to 5-min DCM-style resolution without other code changes.
+        //  Bin granularity is fixed at 30 min (48 bins) — see computed
+        //  `polarBins`. Petal grow animation runs only on first paint.
         // ============================================================
-        polarBins() {
-          const BINS = 48; // 30-minute bins
-          const bins = Array.from({ length: BINS }, (_, i) => ({
-            index: i,
-            startMinutes: i * (1440 / BINS),
-            counts: Object.fromEntries(this.emotions.map(e => [e, 0])),
-            total: 0,
-            tone: 0
-          }));
-          const moments = this.selectedTrendMoments;
-          moments.forEach(m => {
-            const d = this.parseMomentDate(m);
-            const minutes = d.getHours() * 60 + d.getMinutes();
-            const idx = Math.min(BINS - 1, Math.floor(minutes / (1440 / BINS)));
-            bins[idx].counts[m.emotion] += 1;
-            bins[idx].total += 1;
-            bins[idx].tone += this.emotionTone(m.emotion);
-          });
-          bins.forEach(b => {
-            if (b.total) b.tone = b.tone / b.total;
-            b.dominant = this.emotions
-              .map(e => ({ e, c: b.counts[e] }))
-              .sort((a, b2) => b2.c - a.c)[0];
-          });
-          return bins;
-        },
-        renderPolarClock() {
+        renderPolarClock(options = {}) {
           if (!window.d3 || !this.$refs.polarChart) return;
+          const animate = options.animate === true || (!this.polarRendered && options.animate !== false);
           const svgEl = this.$refs.polarChart;
           const wrap = svgEl.parentElement;
           const width = wrap.clientWidth || 520;
@@ -2465,11 +3388,14 @@
           const outerR = Math.min(width, height) / 2 - 24;
           const innerR = outerR * 0.32;
 
+          // Interrupt any in-flight petal transitions before wiping the SVG
+          // (avoids callbacks writing into a detached selection on resize).
           const svg = d3.select(svgEl);
+          svg.selectAll('*').interrupt();
           svg.selectAll('*').remove();
           svg.attr('viewBox', `0 0 ${width} ${height}`);
 
-          const bins = this.polarBins();
+          const bins = this.polarBins;
           const maxCount = Math.max(1, d3.max(bins, b => b.total) || 1);
 
           // Period bands (morning / afternoon / sundown / evening)
@@ -2552,12 +3478,17 @@
                    .style('top', (event.clientY - rect.top) + 'px');
               })
               .on('mouseleave', () => { if (tip) tip.classed('is-visible', false); });
-            // Animate petal "growing" out from inner ring
-            path.transition().duration(700).delay(b.index * 12).ease(d3.easeCubicOut)
-              .attrTween('d', () => {
-                const interp = d3.interpolate(innerR, radial);
-                return t => segArc({ startAngle: startA, endAngle: endA, innerRadius: innerR, outerRadius: interp(t) });
-              });
+            // [Perf] Grow animation only on first paint — resize / data refresh
+            // snap to final geometry so dragging the window stays smooth.
+            if (animate) {
+              path.transition().duration(700).delay(b.index * 12).ease(d3.easeCubicOut)
+                .attrTween('d', () => {
+                  const interp = d3.interpolate(innerR, radial);
+                  return t => segArc({ startAngle: startA, endAngle: endA, innerRadius: innerR, outerRadius: interp(t) });
+                });
+            } else {
+              path.attr('d', segArc({ startAngle: startA, endAngle: endA, innerRadius: innerR, outerRadius: radial }));
+            }
           });
 
           // Center label
@@ -2569,86 +3500,8 @@
           this.polarRendered = true;
         },
 
-        // Period summaries shown beneath the polar clock — cheap natural-language
-        // glosses derived from the same `polarBins()` aggregation. Replace with
-        // an LLM/RAG step when production data arrives.
-        circadianPeriodSummary(period) {
-          const bins = this.polarBins();
-          const ranges = {
-            morning: [6, 12],
-            sundown: [15, 19],
-            evening: [19, 24]
-          };
-          const [start, end] = ranges[period];
-          const slice = bins.filter(b => {
-            const h = b.startMinutes / 60;
-            return h >= start && h < end;
-          });
-          const total = (window.d3 && d3.sum) ? d3.sum(slice, b => b.total) : slice.reduce((s, b) => s + b.total, 0);
-          if (!total) return 'No moments captured in this window yet.';
-          const tally = Object.fromEntries(this.emotions.map(e => [e, 0]));
-          slice.forEach(b => this.emotions.forEach(e => { tally[e] += b.counts[e]; }));
-          const sorted = this.emotions.map(e => ({ e, c: tally[e] })).sort((a, b) => b.c - a.c);
-          const top = sorted[0];
-          if (!top || !top.c) return 'No moments captured in this window yet.';
-          const share = Math.round((top.c / total) * 100);
-          if (period === 'sundown' && (top.e === 'Agitated / restless' || top.e === 'Tearful / emotional')) {
-            return `${top.c}/${total} moments lean ${top.e.toLowerCase()} (${share}%) — worth checking against the sundowning literature.`;
-          }
-          return `${top.e} dominates (${top.c}/${total}, ${share}%).`;
-        },
-        renderCharts() {
-          if (typeof Chart === 'undefined' || !this.$refs.emotionChart || !this.$refs.trendChart) {
-            return;
-          }
-          this.destroyCharts();
-
-          const chartText = '#263532';
-          Chart.defaults.font.family = 'Inter, ui-sans-serif, system-ui, Segoe UI, Arial, sans-serif';
-          Chart.defaults.color = chartText;
-
-          this.emotionChart = new Chart(this.$refs.emotionChart, {
-            type: 'doughnut',
-            data: {
-              labels: this.emotions,
-              datasets: [{
-                data: this.countsByEmotion(),
-                backgroundColor: this.emotions.map(emotion => this.emotionVisual(emotion).mid),
-                borderColor: '#ffffff',
-                borderWidth: 4,
-                hoverOffset: 8
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              animation: false,
-              cutout: '62%',
-              plugins: {
-                legend: {
-                  position: 'bottom',
-                  labels: {
-                    boxWidth: 14,
-                    boxHeight: 14,
-                    padding: 18,
-                    usePointStyle: true
-                  }
-                },
-                tooltip: {
-                  backgroundColor: '#263532',
-                  padding: 12,
-                  cornerRadius: 12
-                }
-              }
-            }
-          });
-
-          // ===== D3 24h Polar Clock (Circadian View) =====
-          // Replaces the previous "Interactions per Resident" bar chart.
-          // Renders into this.$refs.polarChart (<svg>); falls through
-          // silently when D3 is missing or the ref is not yet mounted.
-          this.renderPolarClock();
-
+        // Build Chart.js datasets for the 7-day tone tracker (shared by create + update).
+        buildTrendChartPayload() {
           const trend = this.trendSeries;
           const emotionColorMap = Object.fromEntries(
             this.emotions.map(emotion => [emotion, this.emotionVisual(emotion).mid])
@@ -2666,111 +3519,211 @@
             spanGaps: true,
             order: 2
           }));
-
-          this.trendChart = new Chart(this.$refs.trendChart, {
-            type: 'line',
-            data: {
-              labels: trend.map(point => point.label),
-              datasets: [
-                ...emotionLineDatasets,
-                {
-                  label: 'Overall tone',
-                  data: trend.map(point => point.toneScore),
-                  borderColor: '#4f7f68',
-                  backgroundColor: 'rgba(143, 181, 161, 0.18)',
-                  borderWidth: 3,
-                  fill: true,
-                  pointRadius: 4,
-                  pointHoverRadius: 6,
-                  pointBackgroundColor: '#ffffff',
-                  pointBorderColor: '#4f7f68',
-                  pointBorderWidth: 2,
-                  tension: 0.36,
-                  spanGaps: true,
-                  order: 1
-                }
-              ]
+          return {
+            trend,
+            labels: trend.map(point => point.label),
+            datasets: [
+              ...emotionLineDatasets,
+              {
+                label: 'Overall tone',
+                data: trend.map(point => point.toneScore),
+                borderColor: '#4f7f68',
+                backgroundColor: 'rgba(143, 181, 161, 0.18)',
+                borderWidth: 3,
+                fill: true,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: '#ffffff',
+                pointBorderColor: '#4f7f68',
+                pointBorderWidth: 2,
+                tension: 0.36,
+                spanGaps: true,
+                order: 1
+              }
+            ]
+          };
+        },
+        // Chart.js tooltip callbacks close over a stable `getTrend` so update()
+        // does not need to rebuild the whole chart instance.
+        trendTooltipCallbacks(getTrend) {
+          return {
+            title: (items) => {
+              const point = getTrend()[items[0].dataIndex];
+              return `${point.label} · ${point.total} moment${point.total === 1 ? '' : 's'}`;
             },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              animation: false,
-              interaction: {
-                mode: 'index',
-                intersect: false
+            label: (ctx) => {
+              const point = getTrend()[ctx.dataIndex];
+              if (point.toneScore === null) return 'No moments recorded';
+              return `Overall tone: ${point.toneScore > 0 ? '+' : ''}${point.toneScore}`;
+            },
+            afterLabel: (ctx) => {
+              const point = getTrend()[ctx.dataIndex];
+              if (!point.total) return 'A quiet gap in the record';
+              return `Most visible: ${point.dominantEmotion}`;
+            },
+            footer: (items) => {
+              const point = getTrend()[items[0].dataIndex];
+              if (!point.total) return 'No verdict — just a space to notice.';
+              const counts = this.emotions
+                .filter(emotion => point.emotionCounts[emotion] > 0)
+                .map(emotion => `${emotion}: ${point.emotionCounts[emotion]}`);
+              return counts.join(' · ');
+            }
+          };
+        },
+        renderCharts() {
+          if (typeof Chart === 'undefined' || !this.$refs.emotionChart || !this.$refs.trendChart) {
+            return;
+          }
+
+          const chartText = '#263532';
+          Chart.defaults.font.family = 'Inter, ui-sans-serif, system-ui, Segoe UI, Arial, sans-serif';
+          Chart.defaults.color = chartText;
+
+          const emotionData = this.countsByEmotion();
+          const emotionColors = this.emotions.map(emotion => this.emotionVisual(emotion).mid);
+          const emotionCanvas = this.$refs.emotionChart;
+          const liveEmotion = typeof Chart.getChart === 'function' ? Chart.getChart(emotionCanvas) : null;
+
+          // [Perf] Prefer chart.update('none') over destroy + new Chart when the
+          // canvas instance is still the one we own (resident filter / new moment).
+          if (this.emotionChart && liveEmotion === this.emotionChart) {
+            this.emotionChart.data.labels = this.emotions;
+            this.emotionChart.data.datasets[0].data = emotionData;
+            this.emotionChart.data.datasets[0].backgroundColor = emotionColors;
+            this.emotionChart.update('none');
+          } else {
+            if (liveEmotion) {
+              try { liveEmotion.destroy(); } catch (e) { /* ignore */ }
+            }
+            this.emotionChart = new Chart(emotionCanvas, {
+              type: 'doughnut',
+              data: {
+                labels: this.emotions,
+                datasets: [{
+                  data: emotionData,
+                  backgroundColor: emotionColors,
+                  borderColor: '#ffffff',
+                  borderWidth: 4,
+                  hoverOffset: 8
+                }]
               },
-              scales: {
-                y: {
-                  min: -1.5,
-                  max: 1.5,
-                  grid: {
-                    color: (ctx) => ctx.tick.value === 0 ? '#b8c9c2' : '#e4ecea',
-                    lineWidth: (ctx) => ctx.tick.value === 0 ? 1.5 : 1
-                  },
-                  ticks: {
-                    stepSize: 0.5,
-                    callback: value => {
-                      if (value === 1.5) return 'warmer';
-                      if (value === 0) return 'steady';
-                      if (value === -1.5) return 'heavier';
-                      return '';
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                cutout: '62%',
+                plugins: {
+                  legend: {
+                    position: 'bottom',
+                    labels: {
+                      boxWidth: 14,
+                      boxHeight: 14,
+                      padding: 18,
+                      usePointStyle: true
                     }
                   },
-                  title: { display: true, text: 'Emotional tone' }
-                },
-                x: {
-                  grid: { display: false }
-                }
-              },
-              plugins: {
-                legend: { display: false },
-                tooltip: {
-                  backgroundColor: '#263532',
-                  padding: 12,
-                  cornerRadius: 12,
-                  filter: (ctx) => ctx.dataset.label === 'Overall tone',
-                  callbacks: {
-                    title: (items) => {
-                      const point = trend[items[0].dataIndex];
-                      return `${point.label} · ${point.total} moment${point.total === 1 ? '' : 's'}`;
-                    },
-                    label: (ctx) => {
-                      const point = trend[ctx.dataIndex];
-                      if (point.toneScore === null) return 'No moments recorded';
-                      return `Overall tone: ${point.toneScore > 0 ? '+' : ''}${point.toneScore}`;
-                    },
-                    afterLabel: (ctx) => {
-                      const point = trend[ctx.dataIndex];
-                      if (!point.total) return 'A quiet gap in the record';
-                      return `Most visible: ${point.dominantEmotion}`;
-                    },
-                    footer: (items) => {
-                      const point = trend[items[0].dataIndex];
-                      if (!point.total) return 'No verdict — just a space to notice.';
-                      const counts = this.emotions
-                        .filter(emotion => point.emotionCounts[emotion] > 0)
-                        .map(emotion => `${emotion}: ${point.emotionCounts[emotion]}`);
-                      return counts.join(' · ');
-                    }
+                  tooltip: {
+                    backgroundColor: '#263532',
+                    padding: 12,
+                    cornerRadius: 12
                   }
                 }
               }
-            }
-          });
+            });
+          }
 
+          // ===== D3 24h Polar Clock (Circadian View) =====
+          // First paint animates petals; subsequent data refreshes snap.
+          this.renderPolarClock({ animate: !this.polarRendered });
+
+          const { trend, labels, datasets } = this.buildTrendChartPayload();
+          const trendCanvas = this.$refs.trendChart;
+          const liveTrend = typeof Chart.getChart === 'function' ? Chart.getChart(trendCanvas) : null;
+          const getTrend = () => this.trendSeries;
+
+          if (this.trendChart && liveTrend === this.trendChart) {
+            this.trendChart.data.labels = labels;
+            this.trendChart.data.datasets = datasets;
+            this.trendChart.update('none');
+          } else {
+            if (liveTrend) {
+              try { liveTrend.destroy(); } catch (e) { /* ignore */ }
+            }
+            this.trendChart = new Chart(trendCanvas, {
+              type: 'line',
+              data: { labels, datasets },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                interaction: {
+                  mode: 'index',
+                  intersect: false
+                },
+                scales: {
+                  y: {
+                    min: -1.5,
+                    max: 1.5,
+                    grid: {
+                      color: (ctx) => ctx.tick.value === 0 ? '#b8c9c2' : '#e4ecea',
+                      lineWidth: (ctx) => ctx.tick.value === 0 ? 1.5 : 1
+                    },
+                    ticks: {
+                      stepSize: 0.5,
+                      callback: value => {
+                        if (value === 1.5) return 'warmer';
+                        if (value === 0) return 'steady';
+                        if (value === -1.5) return 'heavier';
+                        return '';
+                      }
+                    },
+                    title: { display: true, text: 'Emotional tone' }
+                  },
+                  x: {
+                    grid: { display: false }
+                  }
+                },
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    backgroundColor: '#263532',
+                    padding: 12,
+                    cornerRadius: 12,
+                    filter: (ctx) => ctx.dataset.label === 'Overall tone',
+                    callbacks: this.trendTooltipCallbacks(getTrend)
+                  }
+                }
+              }
+            });
+          }
+        },
+        // [Perf] Coalesce rapid resize events (window drag) before touching
+        // Chart.js or rebuilding the D3 polar geometry.
+        scheduleChartResize() {
+          if (this.activeTab !== 'Overview') return;
+          if (this.chartResizeTimer) clearTimeout(this.chartResizeTimer);
+          this.chartResizeTimer = setTimeout(() => {
+            this.chartResizeTimer = null;
+            this.resizeCharts();
+          }, 160);
         },
         resizeCharts() {
+          if (this.activeTab !== 'Overview') return;
           [this.emotionChart, this.trendChart].forEach(chart => {
             try { if (chart) chart.resize(); } catch (e) { /* ignore */ }
           });
-          // The polar clock is SVG-based — re-render so the geometry adapts
-          // to the new container width / height.
-          try { this.renderPolarClock(); } catch (e) { /* ignore */ }
+          // Polar clock is SVG — rebuild geometry without grow animation.
+          try { this.renderPolarClock({ animate: false }); } catch (e) { /* ignore */ }
         },
         destroyCharts() {
           if (this.chartRenderFrame) {
             cancelAnimationFrame(this.chartRenderFrame);
             this.chartRenderFrame = null;
+          }
+          if (this.chartResizeTimer) {
+            clearTimeout(this.chartResizeTimer);
+            this.chartResizeTimer = null;
           }
           const charts = new Set([this.emotionChart, this.trendChart]);
           if (typeof Chart !== 'undefined') {
@@ -2786,7 +3739,10 @@
           this.trendChart = null;
           // Clear any rendered polar clock so the next renderCharts() starts fresh.
           if (window.d3 && this.$refs.polarChart) {
-            try { d3.select(this.$refs.polarChart).selectAll('*').remove(); } catch (e) { /* ignore */ }
+            try {
+              d3.select(this.$refs.polarChart).selectAll('*').interrupt();
+              d3.select(this.$refs.polarChart).selectAll('*').remove();
+            } catch (e) { /* ignore */ }
           }
           this.polarRendered = false;
         }
