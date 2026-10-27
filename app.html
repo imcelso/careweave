@@ -1,0 +1,3808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CareWeave - Moments that matter</title>
+  <meta name="description" content="CareWeave — a caring design prototype for capturing, reflecting on, and gently acting around emotional moments in dementia care." />
+  <meta property="og:title" content="CareWeave — Moments that matter" />
+  <meta property="og:description" content="A caring design prototype for capturing, reflecting on, and gently acting around emotional moments in dementia care." />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/svg+xml" href="assets/icon/favicon.svg" />
+  <!-- Inter is the page's primary typeface; loaded with swap so text renders
+       immediately in the system fallback and re-renders once ready. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!--
+    [Perf] Vue / Chart.js / D3 are loaded with `defer` so they don't block
+    HTML parsing and execute in document order after the DOM is ready.
+    Tailwind's runtime JIT (cdn.tailwindcss.com) is intentionally kept
+    SYNCHRONOUS (no `defer`): it must be initialised before the inline
+    `tailwind.config = {...}` block below runs, otherwise the custom
+    `care.*` colours and `shadow-soft` would not be registered and the
+    card shadows / brand colours would silently disappear. We also keep
+    the CDN here (instead of the CLI build) so the page can be hosted on
+    GitHub Pages with zero build step.
+    Vue is loaded as the production build (`vue.global.prod.js`) — strips dev
+    warnings and patches, smaller and faster at runtime than `vue.global.js`.
+  -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+  <!-- D3 v7 powers the 24h Polar Clock (Circadian View). Loaded only on
+       this prototype page; the visualisation degrades silently if D3
+       fails to load (see renderPolarClock guard). -->
+  <script src="https://cdn.jsdelivr.net/npm/d3@7" defer></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'Arial', 'sans-serif']
+          },
+          colors: {
+            care: {
+              cream: '#f7f4ee',
+              mist: '#eef3f2',
+              sage: '#8fb5a1',
+              sageDark: '#4f7f68',
+              teal: '#6aa6a5',
+              blue: '#7d9dbb',
+              ink: '#263532'
+            }
+          },
+          boxShadow: {
+            soft: '0 18px 45px rgba(48, 70, 67, 0.10)'
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    [v-cloak] { display: none; }
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(143, 181, 161, 0.18), transparent 32rem),
+        linear-gradient(135deg, #f7f4ee 0%, #eef3f2 48%, #f4f7f8 100%);
+    }
+
+    /* =====================================================================
+       TYPOGRAPHY SYSTEM — consolidated scale
+       ---------------------------------------------------------------------
+       Five working sizes + two micro utilities. Heading steps keep a
+       clearly visible gradient; prefer these over raw text-xs/sm/lg.
+       body-sm shares the body size (kept as a class for markup intent).
+
+       display  2.25   KPI numbers only
+       h1       1.125  brand mark (header only)
+       h2       1.5    ONE section title per major block
+       h3       1.125  card / nested titles
+       body     0.9375 prose + default UI (labels, lists, helpers)
+       body-sm  0.9375 alias of body (markup intent: UI default)
+       caption  0.8125 meta, timestamps, chart helpers
+       kicker   0.6875 short uppercase eyebrows only
+       badge    0.625  chips
+       micro    0.6875 footer / legal
+       ===================================================================== */
+
+    .t-display {
+      margin: 0;
+      font-size: 2.25rem;
+      line-height: 1;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .t-h1 {
+      margin: 0;
+      font-size: 1.125rem;
+      line-height: 1.25;
+      font-weight: 600;
+      letter-spacing: -0.015em;
+    }
+
+    .t-h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      line-height: 1.3;
+      font-weight: 600;
+      letter-spacing: -0.015em;
+    }
+
+    .t-h3 {
+      margin: 0;
+      font-size: 1.125rem;
+      line-height: 1.3;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .t-body {
+      margin: 0;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+      font-weight: 400;
+    }
+
+    .t-body-sm {
+      margin: 0;
+      font-size: 0.9375rem;
+      line-height: 1.55;
+      font-weight: 400;
+    }
+
+    .t-caption {
+      margin: 0;
+      font-size: 0.75rem;
+      line-height: 1.45;
+      font-weight: 400;
+    }
+
+    .t-micro {
+      margin: 0;
+      font-size: 0.6875rem;
+      line-height: 1.4;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+    }
+
+    .t-kicker {
+      display: block;
+      margin: 0;
+      font-size: 0.6875rem;
+      line-height: 1.25;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .t-badge {
+      font-size: 0.625rem;
+      line-height: 1;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .t-num    { font-variant-numeric: tabular-nums; }
+    .t-strong { font-weight: 600; }
+    .t-muted  { color: #6b7d77; }
+    .t-soft   { color: #4a5b56; } /* secondary prose on white/mist */
+
+    /* ===================================================================== */
+
+    /* =====================================================================
+       SPACING / RHYTHM SYSTEM — 统一的行距与间距节奏
+       ---------------------------------------------------------------------
+       配合上面的字号梯度，给"标题—正文""段落—段落""标签—值"
+       建立一组节奏值，避免某些区域偏挤、某些区域偏空。
+       命名以 4 px 为基准（0.25rem = 4 px）。在标记里直接用即可，
+       例如 class="kicker-gap" / class="title-gap"。
+       ===================================================================== */
+
+    /* 节奏 + 统一卡片表面 token */
+    :root {
+      --rhythm-xs:  0.375rem; /* 6px  —— 标签↔值 */
+      --rhythm-sm:  0.5rem;   /* 8px  —— 标签↔标题 */
+      --rhythm-lg:  1rem;     /* 16px —— 段落↔段落 */
+      --panel-bg: #fff;
+      --panel-border: rgba(47, 61, 56, 0.14);
+      --panel-radius: 1.25rem;
+      --panel-shadow: 0 10px 28px -18px rgba(48, 70, 67, 0.22);
+      /* Sticky header height — used by the save toast so it never overlaps */
+      --header-h: 3.7rem;
+    }
+    @media (max-width: 780px) {
+      :root { --header-h: 6.15rem; }
+    }
+
+    /* 1）小标签 → 标题：紧凑 6px（原先 8px 再叠松行高会显得空）。 */
+    .kicker-gap { margin-top: var(--rhythm-xs); }
+
+    /* 2）标题 → 正文：8px，正常阅读间距。 */
+    .title-gap  { margin-top: var(--rhythm-sm); }
+
+    /* 标题块：kicker + title + optional lede 的默认竖向节奏 */
+    .title-block > * + * { margin-top: 0; }
+    .title-block .kicker-gap { margin-top: var(--rhythm-xs); }
+    .title-block .title-gap  { margin-top: var(--rhythm-sm); }
+
+    /* Shared solid surface — all page cards match Focus */
+    .panel-surface,
+    .insight-panel,
+    .save-success-banner,
+    main .shadow-soft,
+    main .rounded-\[1\.5rem\],
+    main .rounded-\[1\.25rem\] {
+      background: var(--panel-bg) !important;
+      background-image: none !important;
+      border: 1px solid var(--panel-border) !important;
+      border-radius: var(--panel-radius) !important;
+      box-shadow: var(--panel-shadow) !important;
+      /* Kill Tailwind ring/shadow utilities that fight the solid surface */
+      --tw-ring-shadow: 0 0 #0000 !important;
+      --tw-ring-offset-shadow: 0 0 #0000 !important;
+      --tw-shadow: 0 0 #0000 !important;
+    }
+    /* Nested tiles inside modules keep their natural mist tint + hairline
+       border from the markup — hierarchy comes from surface depth
+       (page card = white, nested tile = mist), not stacked borders. */
+
+    /* =====================================================================
+       FOCUS PANEL (Overview sidebar) — clear hierarchy, solid surfaces
+       ===================================================================== */
+    .focus-panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 1.15rem 1.15rem 1rem;
+    }
+    .tone-panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 1.15rem 1.15rem 1rem;
+    }
+    .focus-panel__id {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(47, 61, 56, 0.1);
+    }
+    .focus-panel__photo {
+      width: 4.5rem;
+      height: 4.5rem;
+      border-radius: 0.85rem;
+      object-fit: cover;
+      object-position: 50% 20%;
+      background: #eef3f2;
+      border: 1px solid rgba(47, 61, 56, 0.12);
+      flex-shrink: 0;
+    }
+    .focus-panel__control {
+      margin-top: 1rem;
+    }
+    .focus-panel__control label {
+      display: block;
+      margin-bottom: 0.4rem;
+    }
+    .focus-panel__control select {
+      width: 100%;
+      height: 2.75rem;
+      padding: 0 0.9rem;
+      border-radius: 0.85rem;
+      border: 1px solid rgba(47, 61, 56, 0.22);
+      background: #f7f4ee;
+      color: #263532;
+      font: inherit;
+      font-size: 0.9375rem;
+      outline: none;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .focus-panel__control select:focus {
+      border-color: #4f7f68;
+      box-shadow: 0 0 0 3px rgba(143, 181, 161, 0.28);
+    }
+    .focus-panel__meta {
+      margin: 1rem 0 0;
+      padding: 0;
+      border: 1px solid rgba(47, 61, 56, 0.12);
+      border-radius: 0.9rem;
+      overflow: hidden;
+      background: var(--panel-bg);
+    }
+    .focus-panel__row {
+      display: grid;
+      grid-template-columns: 4.25rem minmax(0, 1fr);
+      gap: 0.65rem;
+      align-items: start;
+      margin: 0;
+      padding: 0.75rem 0.9rem;
+      border-top: 1px solid rgba(47, 61, 56, 0.08);
+    }
+    .focus-panel__row:first-child { border-top: 0; }
+    .focus-panel__row dt {
+      margin: 0;
+      padding-top: 0.1rem;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: #6b7d77;
+      line-height: 1.3;
+    }
+    .focus-panel__row dd {
+      margin: 0;
+      min-width: 0;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: #263532;
+      line-height: 1.4;
+    }
+    .focus-panel__row dd .focus-panel__time {
+      display: block;
+      margin-top: 0.2rem;
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: #6b7d77;
+    }
+    .focus-panel__row.is-latest {
+      background: rgba(143, 181, 161, 0.12);
+    }
+    .focus-panel__row.is-latest dt {
+      color: #4f7f68;
+    }
+    .focus-panel__note {
+      margin-top: auto;
+      padding-top: 1rem;
+    }
+    .focus-panel__note-inner {
+      margin: 0;
+      padding: 0.7rem 0.8rem;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(47, 61, 56, 0.12);
+      background: var(--panel-bg);
+      font-size: 0.8125rem;
+      line-height: 1.45;
+      color: #6b7d77;
+    }
+
+    /* =====================================================================
+       INSIGHT PANEL (Overview AI insight) — light, even rhythm
+       ===================================================================== */
+    .insight-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem; /* even spacing between head / body / meta */
+      padding: 1.1rem 1.2rem;
+      /* surface: shared .panel-surface rules */
+    }
+    .insight-panel__head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.4rem 0.75rem;
+    }
+    .insight-panel__brand {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem 0.6rem;
+      min-width: 0;
+    }
+    .insight-panel__brand .t-kicker {
+      display: inline;
+    }
+    /* Flex gap already spaces the chip — cancel ai-chip's inline margin. */
+    .insight-panel__brand .ai-chip {
+      margin-left: 0;
+    }
+    .insight-panel__hint {
+      margin: 0;
+      width: 100%;
+      font-size: 0.8125rem;
+      line-height: 1.4;
+      color: #6b7d77;
+    }
+    .insight-panel__body {
+      margin: 0;
+      font-size: 0.9375rem; /* = body */
+      line-height: 1.55;
+      font-weight: 500;
+      color: #263532;
+      letter-spacing: -0.005em;
+      max-width: 46rem;
+    }
+    .insight-panel__meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem 0.55rem;
+      margin: 0;
+      padding-top: 0.75rem; /* same as panel gap — even rhythm across the divider */
+      border-top: 1px solid rgba(47, 61, 56, 0.1);
+    }
+    .insight-panel__stat {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.35rem;
+      padding: 0.3rem 0.6rem;
+      border-radius: 999px;
+      background: var(--panel-bg);
+      border: 1px solid rgba(47, 61, 56, 0.12);
+      font-size: 0.8125rem;
+      line-height: 1.2;
+      color: #6b7d77;
+    }
+    .insight-panel__stat strong {
+      font-weight: 600;
+      color: #263532;
+    }
+
+    /* Unified "AI-Powered" chip — ONE component for every AI surface
+       (smart tag button, reflection cards, insight panel). */
+    .ai-chip {
+      display: inline-flex;
+      align-items: center;
+      height: 1.2rem;
+      padding: 0 0.5rem;
+      margin-left: 0.45rem;
+      vertical-align: middle;
+      border-radius: 999px;
+      border: 1px solid rgba(79, 127, 104, 0.22);
+      background: rgba(143, 181, 161, 0.16);
+      color: #4f7f68;
+      font-size: 0.625rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    /* 3）段落（连续 t-body / t-body-sm）之间的舒适距离 —— 16 px。 */
+    .t-body + .t-body,
+    .t-body-sm + .t-body-sm,
+    .t-body + .t-body-sm,
+    .t-body-sm + .t-body { margin-top: var(--rhythm-lg); }
+    /* ===================================================================== */
+
+    /* =====================================================================
+       PRIMARY TAB BAR (Overview / Record / History)
+       ---------------------------------------------------------------------
+       目标：三个标签视觉重量一致，icon 与文字光学对齐，active 与
+       inactive 切换时不出现位移或抖动。基准 = History 标签的尺寸。
+       ===================================================================== */
+    .tab-btn {
+      box-sizing: border-box;
+      border: 1px solid transparent; /* 抵消 active 阴影引起的 1px 偏移 */
+      /* 三个 tab 强制等宽等高：grid 列已经等宽，这里再用 width:100% 保证
+         按钮盒子撑满列；height 固定（不再依赖 min-h + padding），让
+         Overview / Record / History 三个按钮的外框完全一致，与 active /
+         inactive 状态切换无关。 */
+      width: 100%;
+      height: 2.75rem;
+      padding-top: 0;
+      padding-bottom: 0;
+      /* 内部三段式 grid：左占位 1fr + 中间 auto（icon+label）+ 右占位 1fr，
+         保证每个按钮里 icon+label 这一组合相对按钮整体严格居中，不会因
+         label 文字长度差异（Overview/Record/History）而出现视觉偏移。 */
+      display: grid !important;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+    }
+    /* 中间居中段：icon + label 用 inline-flex 排成一组，放在 grid 的第二列。 */
+    .tab-btn .tab-inner {
+      grid-column: 2;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem; /* 等同 Tailwind gap-2，按钮上的 gap-2 此时已无效 */
+    }
+    /* 统一图标"光学盒"：以 History 的占框为基准，三个 icon 都在同一
+       18×18 容器里居中渲染；overflow:visible 保证 stroke 不被裁切。 */
+    .tab-btn .tab-ico {
+      width: 18px;
+      height: 18px;
+      line-height: 0;
+    }
+    .tab-btn .tab-ico svg {
+      display: block;
+      width: 18px;
+      height: 18px;
+      overflow: visible;
+    }
+    /* 文字基线统一：禁用图标对文字的基线影响，三个标签等高对齐 */
+    .tab-btn .tab-label {
+      letter-spacing: 0.005em;
+      line-height: 1;
+      transform: translateY(0.5px); /* 视觉补偿，与 History 的实际渲染对齐 */
+    }
+    .tab-btn:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(143, 181, 161, 0.35);
+    }
+
+    /* Tab switch: enter-only fade + rise. Leave is intentionally instant so
+       the outgoing section never doubles the page height mid-transition. */
+    .tab-enter-active {
+      transition: opacity 260ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .tab-enter-from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .tab-enter-active { transition: none; }
+      .tab-enter-from { opacity: 1; transform: none; }
+    }
+    /* ===================================================================== */
+    .soft-scrollbar::-webkit-scrollbar { width: 10px; }
+    .soft-scrollbar::-webkit-scrollbar-track { background: #eef3f2; border-radius: 999px; }
+    .soft-scrollbar::-webkit-scrollbar-thumb { background: #b8c9c2; border-radius: 999px; }
+    .chart-wrap {
+      position: relative;
+      width: 100%;
+      height: 18rem;
+    }
+    /* ===== D3 Polar Clock (24h Circadian View) =====
+       Wrapper used by the SVG-based visualisation that replaces the old
+       per-resident bar chart. Tooltip is positioned relative to .d3-wrap. */
+    .d3-wrap { position: relative; width: 100%; }
+    .d3-wrap svg { display: block; width: 100%; height: 100%; overflow: visible; }
+    .polar-tick line { stroke: #c8d3ce; stroke-width: 1; }
+    .polar-tick.major line { stroke: #8fb5a1; stroke-width: 1.4; }
+    .polar-tick text { fill: #6b7d77; font-size: 10px; font-weight: 600; }
+    .polar-segment { transition: transform 220ms ease, filter 220ms ease; cursor: pointer; transform-origin: center; transform-box: fill-box; }
+    .polar-segment:hover { filter: brightness(0.9); }
+    .polar-bands path { fill: none; stroke: rgba(143,181,161,0.18); stroke-width: 1; }
+    .polar-center text.title { font-size: 11px; font-weight: 700; letter-spacing: 0.18em; fill: #4f7f68; text-transform: uppercase; }
+    .polar-center text.subtitle { font-size: 10px; fill: #6b7d77; }
+    .polar-center text.kpi { font-size: 22px; font-weight: 700; fill: #263532; }
+    .polar-center text.kpi-label { font-size: 9px; letter-spacing: 0.14em; fill: #94a39d; text-transform: uppercase; }
+    .polar-period text { font-size: 9px; font-weight: 700; letter-spacing: 0.16em; fill: #94a39d; text-transform: uppercase; }
+    .d3-tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: rgba(38, 53, 50, 0.94);
+      color: #f7f4ee;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.45;
+      box-shadow: 0 10px 28px -12px rgba(38, 53, 50, 0.55);
+      transform: translate(-50%, calc(-100% - 10px));
+      opacity: 0;
+      transition: opacity 160ms ease;
+      max-width: 220px;
+      z-index: 30;
+    }
+    .d3-tooltip.is-visible { opacity: 1; }
+    /* Methodology card + demo-data chip used in the polar clock header. */
+    details.method-card {
+      border-radius: 0.9rem;
+      padding: 0.6rem 0.85rem;
+      border: 1px solid rgba(47, 61, 56, 0.12);
+      background: rgba(238, 243, 242, 0.65);
+      transition: background-color 180ms ease;
+    }
+    details.method-card[open] { background: var(--panel-bg); }
+    details.method-card > summary {
+      list-style: none; cursor: pointer;
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.05em;
+      text-transform: uppercase; color: #4f7f68; /* = kicker */
+    }
+    details.method-card > summary::-webkit-details-marker { display: none; }
+    details.method-card > summary::after {
+      content: "+"; margin-left: auto; font-size: 1rem; color: #4f7f68; transition: transform 200ms ease;
+    }
+    details.method-card[open] > summary::after { content: "−"; }
+    details.method-card .method-body {
+      margin-top: 0.6rem; font-size: 0.9375rem; line-height: 1.55; color: #4a5b56; /* body */
+    }
+    details.method-card code {
+      background: rgba(255,255,255,0.7); padding: 0.05rem 0.35rem; border-radius: 4px;
+      font-size: 0.75rem; color: #2f4d40; /* caption */
+    }
+    details.method-card .method-cite { font-size: 0.8125rem; color: #7a8c85; margin-top: 0.45rem; font-style: italic; }
+    .data-mode-toggle {
+      display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem;
+      border-radius: 999px; font-size: 0.625rem; font-weight: 700; letter-spacing: 0.05em;
+      text-transform: uppercase; background: rgba(143,181,161,0.18); color: #4f7f68; /* badge */
+      border: 1px solid rgba(143,181,161,0.4);
+    }
+    .data-mode-toggle .dot {
+      width: 0.5rem; height: 0.5rem; border-radius: 999px; background: #4f7f68;
+      box-shadow: 0 0 0 4px rgba(143,181,161,0.22);
+    }
+    .portrait-img {
+      background: linear-gradient(145deg, #eef3f2, #f7f4ee);
+      object-fit: cover;
+      object-position: 50% 20%;
+    }
+    /* Real-scene anchor at the top of the Record aside — one photograph that
+       carries the product's emotional context (care, warmth, dignity). */
+    .aside-figure {
+      margin: 0 0 1.1rem;
+      border-radius: 1rem;
+      overflow: hidden;
+      border: 1px solid rgba(47, 61, 56, 0.12);
+    }
+    .aside-figure img {
+      display: block;
+      width: 100%;
+      height: 9rem;
+      object-fit: cover;
+    }
+
+    /* =====================================================================
+       EMOTION PICKER (Record) — rebuilt from scratch
+       ---------------------------------------------------------------------
+       Strict equal tiles: every chip is the same width (grid track) and
+       the same height (fixed). Icon sits in a fixed square well; label
+       sits in a fixed 2-line text box so short names (Warm connection)
+       and long names (Agitated / restless) share one vertical center.
+       No Tailwind utilities on the chip itself — avoids utility conflicts
+       with border/padding/line-height that previously threw alignment off.
+       ===================================================================== */
+    .emo-picker {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.65rem;
+    }
+    @media (min-width: 480px) {
+      .emo-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (min-width: 1100px) {
+      .emo-picker { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    .emo-chip {
+      --emo-bg: #f2f8f4;
+      --emo-mid: #91b19e;
+      --emo-border: #cddfd4;
+      --emo-border-strong: #5f8b70;
+      --emo-text: #3d654c;
+      --emo-icon-fg: #43614e;
+      box-sizing: border-box;
+      position: relative;
+      display: grid;
+      grid-template-columns: 2.5rem minmax(0, 1fr);
+      align-items: center;
+      column-gap: 0.7rem;
+      width: 100%;
+      height: 4.25rem;          /* fixed height for every chip */
+      margin: 0;
+      padding: 0 1.75rem 0 0.7rem; /* right room for check / suggested */
+      /* Always 2px so selected state never shifts layout */
+      border: 2px solid var(--emo-border);
+      border-radius: 1rem;
+      background: var(--emo-bg);
+      color: var(--emo-text);
+      font: inherit;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      letter-spacing: 0;
+      text-align: left;
+      cursor: pointer;
+      transition:
+        border-color 160ms ease,
+        background-color 160ms ease,
+        box-shadow 160ms ease;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .emo-chip:hover {
+      border-color: color-mix(in srgb, var(--emo-border-strong) 55%, var(--emo-border));
+      background: color-mix(in srgb, var(--emo-mid) 12%, var(--emo-bg));
+    }
+    .emo-chip:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--emo-border-strong) 26%, transparent);
+    }
+    /* Selected: deeper tint + solid edge + soft outer halo — not washed-out
+       white wash or double inset ring (those read as “broken”). */
+    .emo-chip.is-selected {
+      border-color: var(--emo-border-strong);
+      background: color-mix(in srgb, var(--emo-mid) 28%, var(--emo-bg));
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--emo-border-strong) 20%, transparent);
+    }
+    .emo-chip.is-selected:hover {
+      background: color-mix(in srgb, var(--emo-mid) 34%, var(--emo-bg));
+    }
+    .emo-chip.is-suggested:not(.is-selected) {
+      box-shadow: 0 0 0 3px rgba(143, 181, 161, 0.28);
+    }
+    /* Icon: soft same-hue circle — no white plate, no hard border */
+    .emo-chip__icon {
+      box-sizing: border-box;
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--emo-mid) 32%, transparent);
+      color: var(--emo-icon-fg);
+      border: none;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      transition: background-color 160ms ease;
+    }
+    .emo-chip.is-selected .emo-chip__icon {
+      background: color-mix(in srgb, var(--emo-mid) 55%, #ffffff);
+    }
+    .emo-chip__icon img {
+      display: block;
+      width: 1.15rem;
+      height: 1.15rem;
+      object-fit: contain;
+      /* SVG-as-img stays dark; slight opacity keeps it soft on tinted discs */
+      opacity: 0.88;
+    }
+    .emo-chip.is-selected .emo-chip__icon img {
+      opacity: 1;
+    }
+    /* Clear selected affordance — small filled check, not a second border */
+    .emo-chip__check {
+      position: absolute;
+      top: 50%;
+      right: 0.55rem;
+      transform: translateY(-50%);
+      width: 1.15rem;
+      height: 1.15rem;
+      border-radius: 999px;
+      background: var(--emo-border-strong);
+      color: #fff;
+      display: none;
+      place-items: center;
+      pointer-events: none;
+    }
+    .emo-chip.is-selected .emo-chip__check {
+      display: grid;
+    }
+    .emo-chip__check svg {
+      display: block;
+      width: 0.7rem;
+      height: 0.7rem;
+    }
+    /* Fixed 2-line text slot — short and long labels share the same box,
+       so "Warm connection" lines up with "Agitated / restless". */
+    .emo-chip__body {
+      min-width: 0;
+      height: 2.5rem;           /* exactly 2 × 1.25 line-height */
+      display: flex;
+      align-items: center;      /* vertical center whatever is in the slot */
+    }
+    .emo-chip__name {
+      display: block;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      max-height: 2.5rem;
+      line-height: 1.25;
+      overflow: hidden;
+      overflow-wrap: break-word;
+      word-break: normal;
+      hyphens: none;
+    }
+    /* Suggested sits top-right; selected check uses the vertical center-right */
+    .emo-chip__badge {
+      position: absolute;
+      top: 0.35rem;
+      right: 0.5rem;
+      margin: 0;
+      padding: 0;
+      font-size: 0.625rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #4f7f68;
+      line-height: 1;
+      pointer-events: none;
+    }
+    .emo-chip.is-selected .emo-chip__badge {
+      display: none;
+    }
+
+    /* Save-success toast — visible feedback after Record submit */
+    .save-toast {
+      position: fixed;
+      top: calc(var(--header-h) + 0.9rem);
+      left: 50%;
+      transform: translateX(-50%) translateY(-0.5rem);
+      z-index: 80;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      max-width: min(28rem, calc(100vw - 1.5rem));
+      padding: 0.8rem 1.1rem;
+      border-radius: 999px;
+      background: #2f4d40;
+      color: #f7f4ee;
+      box-shadow: 0 14px 40px -12px rgba(38, 53, 50, 0.45);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease, transform 180ms ease;
+    }
+    .save-toast.is-visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
+    .save-toast__icon {
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 999px;
+      background: rgba(143, 181, 161, 0.35);
+      color: #dcebe2;
+    }
+    .save-toast__icon svg {
+      display: block;
+      width: 0.85rem;
+      height: 0.85rem;
+    }
+    .save-toast__text {
+      font-size: 0.9375rem; /* body */
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .save-success-banner {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      /* surface shared with cards; keep success icon for status cue */
+      padding: 0.85rem 1rem;
+      color: #2f4d40;
+    }
+    .save-success-banner__icon {
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+      display: grid;
+      place-items: center;
+      width: 1.35rem;
+      height: 1.35rem;
+      border-radius: 999px;
+      background: #4f7f68;
+      color: #fff;
+    }
+    .save-success-banner__icon svg {
+      width: 0.75rem;
+      height: 0.75rem;
+    }
+    /* [Perf #7] Kill continuous decorative motion when the user prefers
+       reduced motion (OS setting). Also drop header blur — cheaper paint. */
+    @media (prefers-reduced-motion: reduce) {
+      .animate-ping {
+        animation: none !important;
+      }
+      .polar-segment { transition: none; }
+    }
+    .chart-wrap.tall {
+      height: 21rem;
+    }
+    @media (min-width: 768px) {
+      .chart-wrap { height: 20rem; }
+      .chart-wrap.tall { height: 23rem; }
+    }
+    /* Doughnut inside the Overview week-summary band — shorter than the
+       standalone chart-wrap so the band stays a compact first read. */
+    .chart-wrap--band { height: 12.5rem; }
+    @media (min-width: 1024px) { .chart-wrap--band { height: 15rem; } }
+
+    /* =====================================================================
+       OVERVIEW WEEK-SUMMARY BAND — KPIs first, detail below
+       ---------------------------------------------------------------------
+       One solid panel: title block + three inline stats separated by
+       hairline dividers (no nested cards) + doughnut on the right.
+       ===================================================================== */
+    .overview-band {
+      display: grid;
+      gap: 1.35rem;
+      padding: 1.35rem 1.35rem 1.25rem;
+    }
+    .overview-band__main {
+      display: flex;
+      flex-direction: column;
+      gap: 1.35rem;
+      min-width: 0;
+    }
+    .overview-band__stats {
+      display: grid;
+      gap: 1.1rem;
+    }
+    .overview-stat {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      min-width: 0;
+    }
+    .overview-stat__icon {
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      width: 2.75rem;
+      height: 2.75rem;
+      border-radius: 0.9rem;
+    }
+    .overview-stat__icon svg { width: 1.25rem; height: 1.25rem; }
+    .overview-stat__icon--warm { background: rgba(143, 181, 161, 0.16); color: #4f7f68; }
+    .overview-stat__icon--notice { background: rgba(125, 157, 187, 0.16); color: #567d98; }
+    .overview-stat__icon--person { background: rgba(106, 166, 165, 0.16); color: #4f7f68; }
+    @media (min-width: 640px) {
+      .overview-band__stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .overview-stat + .overview-stat {
+        border-left: 1px solid rgba(47, 61, 56, 0.1);
+        padding-left: 1.1rem;
+      }
+    }
+    @media (min-width: 1024px) {
+      .overview-band {
+        grid-template-columns: minmax(0, 1fr) minmax(14rem, 17rem);
+        gap: 1.5rem;
+      }
+      .overview-band__chart {
+        border-left: 1px solid rgba(47, 61, 56, 0.1);
+        padding-left: 1.5rem;
+      }
+    }
+    /* =====================================================================
+       SITE HEADER — compact single bar
+       ---------------------------------------------------------------------
+       Desktop:  [Portfolio capsule][Brand]  |  Tabs (center)  |  Staff
+       Mobile:   top row brand+staff, tabs full-width under
+       Keep vertical height low — no double-stack identity chrome.
+       ===================================================================== */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 1px solid rgba(47, 61, 56, 0.08);
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .site-header__inner {
+      box-sizing: border-box;
+      width: 100%;
+      max-width: 80rem;
+      margin: 0 auto;
+      padding: 0.55rem 1rem;
+    }
+    @media (min-width: 640px) {
+      .site-header__inner { padding: 0.55rem 1.5rem; }
+    }
+    @media (min-width: 1024px) {
+      .site-header__inner { padding: 0.55rem 2rem; }
+    }
+
+    /* 3-column balance: left / center tabs / right */
+    .site-header__bar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      column-gap: 0.75rem;
+      min-width: 0;
+    }
+    .site-header__left {
+      justify-self: start;
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      min-width: 0;
+    }
+    .site-header__brand {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      min-width: 0;
+    }
+    .site-header__divider {
+      flex-shrink: 0;
+      width: 1px;
+      height: 1.65rem;
+      background: rgba(79, 127, 104, 0.28);
+    }
+    @media (max-width: 420px) {
+      .site-header__left { gap: 0.65rem; }
+      .site-header__divider { height: 1.4rem; }
+    }
+    .site-header__right {
+      justify-self: end;
+      min-width: 0;
+    }
+
+    /* Portfolio — soft capsule again */
+    .site-header__exit {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.28rem;
+      flex-shrink: 0;
+      height: 2rem;
+      padding: 0 0.7rem 0 0.55rem;
+      border-radius: 999px;
+      border: 1px solid rgba(143, 181, 161, 0.34);
+      background: rgba(143, 181, 161, 0.14);
+      color: #4f7f68;
+      font-size: 0.8125rem; /* = caption */
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+    }
+    .site-header__exit:hover {
+      background: rgba(143, 181, 161, 0.24);
+      border-color: rgba(143, 181, 161, 0.5);
+      color: #3f6b56;
+    }
+    .site-header__exit:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(143, 181, 161, 0.28);
+    }
+    .site-header__exit svg {
+      flex-shrink: 0;
+      transition: transform 180ms ease;
+    }
+    .site-header__exit:hover svg { transform: translateX(-1.5px); }
+    @media (max-width: 420px) {
+      .site-header__exit-label { display: none; }
+      .site-header__exit { padding: 0 0.5rem; }
+    }
+
+    .site-header__mark {
+      display: grid;
+      place-items: center;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 0.65rem;
+      background: #4f7f68;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .site-header__mark svg {
+      width: 1.05rem;
+      height: 1.05rem;
+    }
+    .site-header__titles {
+      min-width: 0;
+    }
+    .site-header__titles .t-h1 {
+      color: #263532;
+    }
+    /* Tagline only when there is room — keeps the bar thin */
+    .site-header__titles .t-caption {
+      display: none;
+      margin-top: 0.1rem;
+    }
+    @media (min-width: 1100px) {
+      .site-header__titles .t-caption { display: block; }
+    }
+
+    .site-header__staff {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-shrink: 0;
+      height: 2rem;
+      padding: 0 0.65rem 0 0.3rem;
+      border-radius: 999px;
+      background: rgba(238, 243, 242, 0.95);
+      border: 1px solid rgba(143, 181, 161, 0.28);
+      color: #4a5b56;
+      font-size: 0.8125rem; /* caption */
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .site-header__avatar {
+      display: grid;
+      place-items: center;
+      width: 1.35rem;
+      height: 1.35rem;
+      border-radius: 999px;
+      background: #4f7f68;
+      color: #fff;
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .site-header__staff strong {
+      font-weight: 600;
+      color: #2f4d40;
+    }
+    .site-header__staff-sep { color: #94a39d; }
+    .site-header__staff-meta { color: #6b7d77; font-weight: 400; }
+    @media (max-width: 560px) {
+      .site-header__staff-meta,
+      .site-header__staff-sep { display: none; }
+    }
+
+    /* Centered tab cluster */
+    .site-header__nav {
+      justify-self: center;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.15rem;
+      width: min(22.5rem, 42vw);
+      min-width: 16.5rem;
+      margin: 0;
+      padding: 0.18rem;
+      border-radius: 999px;
+      background: rgba(238, 243, 242, 0.98);
+      box-shadow: inset 0 1px 2px rgba(48, 70, 67, 0.04);
+    }
+    .site-header__nav .tab-btn {
+      height: 2.15rem;
+      border-radius: 999px;
+      background: transparent;
+      color: #5a6d67;
+      font-size: 0.875rem; /* body-sm */
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+    }
+    .site-header__nav .tab-btn.is-active {
+      background: #fff;
+      color: #4f7f68;
+      box-shadow: 0 1px 2px rgba(48, 70, 67, 0.08);
+    }
+    .site-header__nav .tab-btn:hover:not(.is-active) {
+      color: #263532;
+      background: rgba(255, 255, 255, 0.5);
+    }
+    /* On mid widths, drop tab icons to keep the center cluster compact */
+    @media (max-width: 960px) {
+      .site-header__nav .tab-ico { display: none; }
+      .site-header__nav { width: min(18rem, 46vw); min-width: 14.5rem; }
+    }
+
+    /* Narrow screens: brand+staff on top, tabs full width under */
+    @media (max-width: 780px) {
+      .site-header__bar {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+          "left right"
+          "nav nav";
+        row-gap: 0.45rem;
+      }
+      .site-header__left { grid-area: left; }
+      .site-header__right { grid-area: right; }
+      .site-header__nav {
+        grid-area: nav;
+        justify-self: stretch;
+        width: 100%;
+        min-width: 0;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .site-header {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background: rgba(255, 255, 255, 0.94);
+      }
+      .site-header__exit svg { transition: none; }
+    }
+
+    /* ============================================================
+       History 页筛选控件：人名下拉框 + 两个日期框
+       彻底重写，不再依赖工具类拼凑。用统一的 grid 行 +
+       固定高度的控件，保证三框在桌面端严格对齐在同一水平线。
+       ============================================================ */
+    .history-toolbar {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 100%;
+    }
+    .history-filters {
+      display: grid;
+      grid-template-columns: 1fr;        /* 移动端：每个控件独占一行 */
+      gap: 0.75rem;
+      width: 100%;
+    }
+    /* 统一控件外观：彻底覆盖浏览器对 select / input[date] 的默认渲染 */
+    .history-filters .control {
+      -webkit-appearance: none;
+      appearance: none;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      height: 3rem;                      /* 三框完全相同的高度 */
+      margin: 0;
+      padding: 0 1rem;
+      border: 1px solid rgba(122, 140, 133, 0.35);
+      border-radius: 1rem;
+      background-color: var(--care-cream, #f7f4ec);
+      font-family: inherit;
+      font-size: 0.9375rem; /* = body */
+      line-height: 1.2;
+      color: var(--care-ink, #2f3a36);
+      outline: none;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .history-filters .control:focus {
+      border-color: #6c8079;
+      box-shadow: 0 0 0 4px rgba(140, 162, 152, 0.2);
+    }
+    /* 下拉框：自绘箭头，避免默认箭头改变高度/对齐 */
+    .history-filters select.control {
+      padding-right: 2.5rem;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237a8c85' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+    }
+    /* 日期框：使用独立类，保留浏览器原生外观（含原生日历图标）。
+       只统一高度 / 内边距 / 圆角，绝不使用 appearance:none，
+       否则 WebKit 会把日历选择图标一起隐藏掉。 */
+    .history-filters .date-control {
+      box-sizing: border-box;
+      height: 3rem;
+      margin: 0;
+      padding: 0 0.85rem;
+      border: 1px solid rgba(122, 140, 133, 0.35);
+      border-radius: 1rem;
+      background-color: var(--care-cream, #f7f4ec);
+      font-family: inherit;
+      font-size: 0.9375rem; /* = body */
+      color: var(--care-ink, #2f3a36);
+      outline: none;
+      transition: border-color 160ms ease, box-shadow 160ms ease;
+    }
+    .history-filters .date-control:focus {
+      border-color: #6c8079;
+      box-shadow: 0 0 0 4px rgba(140, 162, 152, 0.2);
+    }
+    .history-filters .date-control::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      opacity: 0.6;
+    }
+    .history-filters .date-control::-webkit-calendar-picker-indicator:hover {
+      opacity: 0.9;
+    }
+    .history-filters .dash {
+      display: none;                     /* 移动端隐藏分隔符 */
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+    }
+    /* 桌面端：三框一行排布，垂直居中对齐在同一水平线 */
+    @media (min-width: 640px) {
+      .history-toolbar {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .history-filters {
+        grid-template-columns: auto 9rem auto 9rem; /* 人名 | 起始日期 | — | 结束日期 */
+        align-items: center;
+        width: auto;
+      }
+      .history-filters select.control { min-width: 11rem; }
+      .history-filters .dash { display: flex; }
+    }
+  </style>
+</head>
+<body class="min-h-screen text-care-ink antialiased">
+  <div id="app" v-cloak class="min-h-screen">
+    <!-- Global toast for Record save success (also mirrored inline under the form) -->
+    <div
+      class="save-toast"
+      :class="{ 'is-visible': !!saveSuccess }"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <span class="save-toast__icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16" fill="none">
+          <path d="M3.5 8.2 6.4 11l6.1-6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <div class="save-toast__text" v-if="saveSuccess">Moment saved</div>
+    </div>
+
+    <header class="site-header">
+      <div class="site-header__inner">
+        <div class="site-header__bar">
+          <!-- Left: portfolio capsule + brand -->
+          <div class="site-header__left">
+            <a href="https://celso.cc" class="site-header__exit" aria-label="Back to portfolio">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span class="site-header__exit-label">Portfolio</span>
+            </a>
+            <span class="site-header__divider" aria-hidden="true"></span>
+            <div class="site-header__brand">
+              <div class="site-header__mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M12 20s-7-4.35-7-10.15A4.32 4.32 0 0 1 9.36 5.5c1.2 0 2.22.57 2.64 1.28.42-.71 1.44-1.28 2.64-1.28A4.32 4.32 0 0 1 19 9.85C19 15.65 12 20 12 20Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="site-header__titles">
+                <h1 class="t-h1">CareWeave</h1>
+                <p class="t-caption t-muted">Moments that matter</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Center: primary tabs -->
+          <nav class="site-header__nav" aria-label="Primary">
+            <button
+              v-for="tab in tabs"
+              :key="tab"
+              type="button"
+              class="tab-btn"
+              :class="{ 'is-active': activeTab === tab }"
+              :aria-current="activeTab === tab ? 'page' : undefined"
+              @click="setTab(tab)"
+            >
+              <span class="tab-inner">
+                <span class="tab-ico" aria-hidden="true">
+                  <svg v-if="tab === 'Overview'" viewBox="0 0 24 24" fill="none">
+                    <path d="M4 17.5c2.2-4.2 4.5-5.4 6.8-3.5 1.9 1.6 3.4 1.2 4.6-.9L20 5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4 19h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                    <circle cx="10.8" cy="14" r="1.15" fill="currentColor"/>
+                    <circle cx="15.4" cy="13.1" r="1.15" fill="currentColor"/>
+                  </svg>
+                  <svg v-else-if="tab === 'Record'" viewBox="0 0 24 24" fill="none">
+                    <path d="M7 4.8h7.5L18 8.3v10.9a1.8 1.8 0 0 1-1.8 1.8H7a1.8 1.8 0 0 1-1.8-1.8V6.6A1.8 1.8 0 0 1 7 4.8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                    <path d="M14.5 4.8v3.7H18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M11.6 16.4s-3-1.8-3-4.2a1.75 1.75 0 0 1 3-1.25 1.75 1.75 0 0 1 3 1.25c0 2.4-3 4.2-3 4.2Z" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <svg v-else viewBox="0 0 24 24" fill="none">
+                    <path d="M12 7.2v5.1l3.2 1.9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M5.5 6.7A8.2 8.2 0 1 1 4 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4.2 4.6v4.1h4.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <span class="tab-label">{{ tab }}</span>
+              </span>
+            </button>
+          </nav>
+
+          <!-- Right: staff meta -->
+          <div class="site-header__right">
+            <div class="site-header__staff" title="Current staff on this shift">
+              <span class="site-header__avatar" aria-hidden="true">A</span>
+              <span>
+                <strong>Ana</strong>
+                <span class="site-header__staff-sep"> · </span>
+                <span class="site-header__staff-meta">with Lars</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <!-- [Perf #6] v-show keeps tab DOM (and Overview chart canvases) mounted
+           so switching tabs does not destroy/rebuild Chart.js + D3 every time. -->
+      <transition name="tab">
+      <section v-show="activeTab === 'Record'" class="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]">
+        <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-7">
+          <div class="title-block mb-6">
+            <p class="t-kicker text-care-sageDark">Quick capture</p>
+            <h2 class="kicker-gap t-h2 text-care-ink">Record a moment</h2>
+            <p class="title-gap max-w-2xl t-body-sm t-soft">
+              A short note from morning tea, garden time, a reminiscence group, or handover can be enough.
+            </p>
+          </div>
+
+          <form class="space-y-6" @submit.prevent="saveMoment">
+            <div>
+              <label for="resident" class="mb-2 block t-body-sm t-strong text-care-ink">Resident</label>
+              <select
+                id="resident"
+                v-model="form.resident"
+                class="w-full rounded-2xl border border-care-sageDark/35 bg-care-cream px-4 py-3 t-body-sm text-care-ink outline-none transition focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
+              >
+                <option value="">Select a resident</option>
+                <option v-for="resident in residents" :key="resident" :value="resident">{{ resident }}</option>
+              </select>
+            </div>
+
+            <div>
+              <fieldset class="m-0 min-w-0 border-0 p-0">
+                <legend class="mb-3 block t-body-sm t-strong text-care-ink">Emotion tag</legend>
+                <div class="emo-picker" role="radiogroup" aria-label="Emotion tag">
+                  <button
+                    v-for="emotion in emotions"
+                    :key="emotion"
+                    type="button"
+                    role="radio"
+                    class="emo-chip"
+                    :class="{
+                      'is-selected': form.emotion === emotion,
+                      'is-suggested': suggestedEmotion === emotion && form.emotion !== emotion
+                    }"
+                    :style="emotionChipVars(emotion)"
+                    :aria-checked="form.emotion === emotion ? 'true' : 'false'"
+                    @click="selectEmotion(emotion)"
+                  >
+                    <span class="emo-chip__icon" aria-hidden="true">
+                      <img :src="emotionVisual(emotion).icon" alt="" width="18" height="18" decoding="async" />
+                    </span>
+                    <span class="emo-chip__body">
+                      <span class="emo-chip__name">{{ emotion }}</span>
+                    </span>
+                    <span class="emo-chip__check" aria-hidden="true">
+                      <svg viewBox="0 0 16 16" fill="none">
+                        <path d="M3.5 8.2 6.4 11l6.1-6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </span>
+                    <span
+                      v-if="suggestedEmotion === emotion && form.emotion !== emotion"
+                      class="emo-chip__badge"
+                    >Suggested</span>
+                  </button>
+                </div>
+              </fieldset>
+            </div>
+
+            <div>
+              <label for="note" class="mb-2 block t-body-sm t-strong text-care-ink">Brief note</label>
+              <textarea
+                id="note"
+                v-model.trim="form.note"
+                rows="5"
+                placeholder="What happened? (optional, 1-2 sentences)"
+                class="w-full resize-none rounded-2xl border border-care-sageDark/35 bg-care-cream px-4 py-3 t-body-sm text-care-ink outline-none transition placeholder:text-[#b8a084] focus:border-care-sageDark focus:ring-4 focus:ring-care-sage/20"
+              ></textarea>
+              <div class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  class="inline-flex w-fit items-center justify-center rounded-full bg-care-mist px-4 py-2 t-body-sm t-strong text-care-sageDark transition hover:bg-[#dfece5]"
+                  @click="suggestEmotion"
+                >
+                  AI Smart Tag: suggest emotion
+                  <span class="ai-chip">AI-Powered</span>
+                </button>
+                <p v-if="suggestionMessage" class="t-body-sm t-soft">{{ suggestionMessage }}</p>
+              </div>
+            </div>
+
+            <div v-if="formError" class="rounded-2xl bg-rose-50 px-4 py-3 t-body-sm text-rose-700" role="alert">
+              {{ formError }}
+            </div>
+
+            <div
+              v-if="saveSuccess"
+              class="save-success-banner"
+              role="status"
+              aria-live="polite"
+            >
+              <span class="save-success-banner__icon" aria-hidden="true">
+                <svg viewBox="0 0 16 16" fill="none">
+                  <path d="M3.5 8.2 6.4 11l6.1-6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </span>
+              <p class="t-body-sm t-strong">Moment saved</p>
+            </div>
+
+            <button
+              type="submit"
+              class="inline-flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-2xl bg-care-sageDark px-5 py-3 t-body-sm t-strong text-white shadow-sm transition hover:bg-[#416d59] focus:outline-none focus:ring-4 focus:ring-care-sage/35 sm:w-auto"
+            >
+              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M5 12.5 10 17 19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Save moment
+            </button>
+          </form>
+        </div>
+
+        <aside class="space-y-6">
+          <div class="rounded-[1.5rem] bg-white/78 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
+            <figure class="aside-figure">
+              <img
+                src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=Photorealistic%20editorial%20photograph%2C%20warm%20morning%20sunlight%20streaming%20through%20a%20garden%20window%20into%20a%20cozy%20care%20home%20common%20room%2C%20elderly%20hands%20cradling%20a%20floral%20teacup%20on%20a%20wooden%20table%2C%20soft%20sage%20green%20and%20cream%20color%20palette%2C%20shallow%20depth%20of%20field%2C%20calm%20dignified%20atmosphere%2C%20no%20faces%2C%20no%20text%2C%20no%20logos&image_size=landscape_4_3"
+                alt="Morning light and a cup of tea in the care home common room"
+                width="672"
+                height="504"
+                loading="lazy"
+                decoding="async"
+              />
+            </figure>
+            <div class="title-block">
+              <p class="t-kicker text-care-sageDark">Today</p>
+              <h2 class="kicker-gap t-h2 text-care-ink">A lighter handover</h2>
+              <p class="title-gap t-body-sm t-soft">
+                Ana can capture what stood out, then bring a short reflection into shift handover without turning it into extra paperwork.
+              </p>
+            </div>
+            <div class="mt-5 grid gap-3 t-body-sm t-soft">
+              <div class="flex items-center gap-3 rounded-2xl bg-care-mist px-4 py-3">
+                <span class="h-2.5 w-2.5 rounded-full bg-care-sageDark"></span>
+                Morning tea and personal care
+              </div>
+              <div class="flex items-center gap-3 rounded-2xl bg-care-mist px-4 py-3">
+                <span class="h-2.5 w-2.5 rounded-full bg-care-blue"></span>
+                Reminiscence group at 14:00
+              </div>
+              <div class="flex items-center gap-3 rounded-2xl bg-care-mist px-4 py-3">
+                <span class="h-2.5 w-2.5 rounded-full bg-care-teal"></span>
+                Garden time before evening handover
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-[1.5rem] bg-white/82 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
+            <div class="mb-4 title-block">
+              <p class="t-kicker text-care-sageDark">Residents</p>
+              <h3 class="kicker-gap t-h3 text-care-ink">People behind the pattern</h3>
+            </div>
+            <div class="grid gap-3">
+              <div
+                v-for="resident in residents"
+                :key="resident"
+                class="flex items-center gap-3 rounded-2xl bg-care-mist/80 p-3"
+              >
+                <img :src="profileFor(resident).photo" alt="" class="portrait-img h-12 w-12 rounded-xl" width="48" height="48" loading="lazy" decoding="async" />
+                <div class="min-w-0">
+                  <p class="truncate t-body-sm t-strong text-care-ink">{{ resident }}</p>
+                  <p class="truncate t-caption t-muted">{{ profileFor(resident).rhythm }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="isReflecting" class="rounded-[1.5rem] bg-white/88 p-6 shadow-soft ring-1 ring-white/80">
+            <div class="flex items-center gap-3">
+              <div class="relative h-11 w-11 rounded-full bg-care-sage/30">
+                <span class="absolute inset-2 animate-ping rounded-full bg-care-sage/45"></span>
+                <span class="absolute inset-3 rounded-full bg-care-sageDark"></span>
+              </div>
+              <div>
+                <p class="t-kicker text-care-sageDark">AI reflection <span class="ai-chip">AI-Powered</span></p>
+                <p class="mt-1.5 t-body-sm t-soft">listening for relational cues...</p>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="latestReflection && !isReflecting" class="rounded-[1.5rem] bg-white p-6 shadow-soft ring-1 ring-care-sage/25">
+            <div class="mb-4 flex items-center gap-3">
+              <img :src="profileFor(latestReflection.resident).photo" alt="" class="portrait-img h-12 w-12 rounded-2xl shadow-sm" width="48" height="48" loading="lazy" decoding="async" />
+              <div>
+                <p class="t-kicker text-care-sageDark">AI reflection <span class="ai-chip">AI-Powered</span></p>
+                <p class="mt-1 t-caption t-muted">{{ latestReflection.resident }} · {{ latestReflection.emotion }}</p>
+              </div>
+            </div>
+            <p class="t-body text-care-ink">{{ latestReflection.aiPrompt }}</p>
+            <div v-if="!feedbackMessage" class="mt-6 flex flex-wrap gap-3">
+              <button type="button" class="rounded-full bg-care-sageDark px-4 py-2 t-body-sm t-strong text-white transition hover:bg-[#416d59]" @click="giveFeedback">Helpful</button>
+              <button type="button" class="rounded-full bg-care-mist px-4 py-2 t-body-sm t-strong text-care-ink transition hover:bg-[#dfece5]" @click="giveFeedback">Not quite</button>
+            </div>
+            <p v-else class="mt-6 rounded-2xl bg-care-mist px-4 py-3 t-body-sm t-strong text-care-sageDark">
+              {{ feedbackMessage }}
+            </p>
+          </div>
+        </aside>
+      </section>
+      </transition>
+
+      <transition name="tab">
+      <section v-show="activeTab === 'History'" class="space-y-6">
+        <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
+          <div class="history-toolbar">
+            <div class="title-block">
+              <p class="t-kicker text-care-sageDark">History</p>
+              <h2 class="kicker-gap t-h2 text-care-ink">Recorded moments</h2>
+            </div>
+            <div class="history-filters">
+              <select id="filterResident" v-model="historyFilter" class="control">
+                <option value="All">All residents</option>
+                <option v-for="resident in residents" :key="resident" :value="resident">{{ resident }}</option>
+              </select>
+              <input id="dateFrom" type="date" v-model="historyDateFrom" class="date-control" />
+              <span class="dash">—</span>
+              <input id="dateTo" type="date" v-model="historyDateTo" class="date-control" />
+            </div>
+          </div>
+        </div>
+
+        <div v-if="historyFilter !== 'All'" class="rounded-[1.5rem] border border-care-sage/30 bg-white/90 p-5 shadow-soft sm:p-6">
+          <div class="flex items-start gap-4">
+            <img :src="profileFor(historyFilter).photo" alt="" class="portrait-img h-14 w-14 rounded-2xl shadow-sm" width="56" height="56" loading="lazy" decoding="async" />
+            <div>
+              <p class="t-kicker text-care-sageDark">Relationship insight <span class="ai-chip">AI-Powered</span></p>
+              <p class="mt-1.5 t-body text-care-ink">{{ historyResidentInsight }}</p>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="filteredMoments.length === 0" class="rounded-[1.5rem] bg-white/80 p-10 text-center shadow-soft ring-1 ring-white/80">
+          <p class="t-h3 text-care-ink">{{ historyEmptyTitle }}</p>
+          <p class="mt-2 t-body-sm t-soft">{{ historyEmptyMessage }}</p>
+        </div>
+
+        <div v-else class="grid gap-4">
+          <article
+            v-for="moment in paginatedMoments"
+            :key="moment.id"
+            class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80"
+          >
+            <div class="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+              <div class="flex items-center gap-4">
+                <img :src="profileFor(moment.resident).photo" alt="" class="portrait-img h-14 w-14 rounded-2xl shadow-sm" width="56" height="56" loading="lazy" decoding="async" />
+                <div>
+                  <p class="t-caption t-muted">{{ moment.timestamp }}</p>
+                  <h3 class="mt-1 t-h3 text-care-ink">{{ moment.resident }}</h3>
+                </div>
+              </div>
+              <span class="inline-flex w-fit rounded-full px-3 py-1 t-body-sm t-strong" :class="emotionStyles[moment.emotion].badge">
+                {{ moment.emotion }}
+              </span>
+            </div>
+            <p class="mt-4 t-body text-care-ink">{{ moment.note || 'No brief note added.' }}</p>
+            <div class="mt-4 rounded-2xl bg-care-mist px-4 py-4">
+              <p class="t-kicker text-care-sageDark">Reflection</p>
+              <p class="mt-1.5 t-body text-care-ink">{{ moment.aiPrompt }}</p>
+            </div>
+          </article>
+        </div>
+
+        <div v-if="filteredMoments.length > pageSize" class="flex items-center justify-center gap-1 rounded-[1.25rem] bg-white/82 px-4 py-3 shadow-soft ring-1 ring-white/80">
+          <button type="button" class="inline-flex items-center justify-center rounded-lg p-2 t-muted transition hover:bg-care-mist hover:text-care-ink disabled:opacity-30 disabled:cursor-not-allowed" :disabled="currentHistoryPage === 1" @click="currentHistoryPage = 1" title="First">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m11 17-5-5 5-5M18 17l-5-5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button type="button" class="inline-flex items-center justify-center rounded-lg p-2 t-muted transition hover:bg-care-mist hover:text-care-ink disabled:opacity-30 disabled:cursor-not-allowed" :disabled="currentHistoryPage === 1" @click="currentHistoryPage--" title="Previous">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m15 18-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span class="mx-3 t-body-sm t-strong text-care-ink whitespace-nowrap">
+            Page {{ currentHistoryPage }} / {{ totalHistoryPages }} <span class="t-muted" style="font-weight:400">· {{ filteredMoments.length }} records</span>
+          </span>
+          <button type="button" class="inline-flex items-center justify-center rounded-lg p-2 t-muted transition hover:bg-care-mist hover:text-care-ink disabled:opacity-30 disabled:cursor-not-allowed" :disabled="currentHistoryPage === totalHistoryPages" @click="currentHistoryPage++" title="Next">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 18 6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button type="button" class="inline-flex items-center justify-center rounded-lg p-2 t-muted transition hover:bg-care-mist hover:text-care-ink disabled:opacity-30 disabled:cursor-not-allowed" :disabled="currentHistoryPage === totalHistoryPages" @click="currentHistoryPage = totalHistoryPages" title="Last">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 17 5-5-5-5M13 17l5-5-5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </section>
+      </transition>
+
+      <transition name="tab">
+      <section v-show="activeTab === 'Overview'" class="space-y-6">
+        <div v-if="moments.length === 0" class="rounded-[1.5rem] bg-white/80 p-10 text-center shadow-soft ring-1 ring-white/80">
+          <p class="t-h3 text-care-ink">No trend data yet.</p>
+          <p class="mt-2 t-body-sm t-soft">Record a few moments to see patterns with care.</p>
+        </div>
+
+        <div v-else class="space-y-6">
+          <!-- Week summary band: numbers first, depth below -->
+          <section class="overview-band panel-surface" aria-label="Week summary">
+            <div class="overview-band__main">
+              <div class="title-block">
+                <p class="t-kicker text-care-sageDark">This week · {{ weekRangeLabel }}</p>
+                <h2 class="kicker-gap t-h2 text-care-ink">Emotion trends this week</h2>
+                <p class="title-gap max-w-xl t-body-sm t-soft">
+                  {{ moments.length }} moments across {{ residents.length }} residents — morning tea, garden time, reminiscence groups, and handovers.
+                </p>
+              </div>
+              <div class="overview-band__stats">
+                <div class="overview-stat">
+                  <span class="overview-stat__icon overview-stat__icon--warm" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.5-7 10-7 10z"/></svg>
+                  </span>
+                  <div class="min-w-0">
+                    <p class="t-kicker text-care-sageDark">Positive</p>
+                    <p class="mt-1 t-display t-num text-care-ink">{{ positiveCount }}</p>
+                    <p class="t-caption t-muted">Warm or quietly settled moments.</p>
+                  </div>
+                </div>
+                <div class="overview-stat">
+                  <span class="overview-stat__icon overview-stat__icon--notice" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                  </span>
+                  <div class="min-w-0">
+                    <p class="t-kicker text-care-sageDark">Needs notice</p>
+                    <p class="mt-1 t-display t-num text-care-ink">{{ supportCount }}</p>
+                    <p class="t-caption t-muted">Low, restless, or tearful moments.</p>
+                  </div>
+                </div>
+                <div class="overview-stat">
+                  <span class="overview-stat__icon overview-stat__icon--person" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                  </span>
+                  <div class="min-w-0">
+                    <p class="t-kicker text-care-sageDark">Most observed</p>
+                    <p class="mt-1 t-h2 truncate text-care-ink">{{ mostActiveResident.resident }}</p>
+                    <p class="t-caption t-muted">{{ mostActiveResident.count }} moments this week.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="overview-band__chart">
+              <p class="t-kicker text-care-sageDark">Distribution</p>
+              <p class="mt-1 t-caption t-muted">{{ moments.length }} recorded moments</p>
+              <div class="chart-wrap chart-wrap--band mt-3">
+                <canvas ref="emotionChart" aria-label="Emotion distribution doughnut chart"></canvas>
+              </div>
+            </div>
+          </section>
+
+          <div class="grid items-stretch gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
+            <aside class="focus-panel panel-surface">
+              <!-- 1. Who: identity -->
+              <div class="focus-panel__id">
+                <img
+                  :src="selectedTrendProfile.photo"
+                  alt=""
+                  class="focus-panel__photo"
+                  width="72"
+                  height="72"
+                  decoding="async"
+                  fetchpriority="high"
+                />
+                <div class="title-block min-w-0">
+                  <p class="t-kicker text-care-sageDark">Focus</p>
+                  <h3 class="kicker-gap truncate t-h3 text-care-ink">{{ selectedTrendResident }}</h3>
+                  <p class="title-gap t-caption t-muted">{{ selectedTrendProfile.country }}</p>
+                </div>
+              </div>
+
+              <!-- 2. Control -->
+              <div class="focus-panel__control">
+                <label for="trendResident" class="t-body-sm t-strong text-care-ink">Track resident</label>
+                <select id="trendResident" v-model="selectedTrendResident">
+                  <option value="All residents">All residents</option>
+                  <option v-for="resident in residents" :key="resident" :value="resident">{{ resident }}</option>
+                </select>
+              </div>
+
+              <!-- 3. Facts: label | value rows -->
+              <dl class="focus-panel__meta">
+                <div class="focus-panel__row">
+                  <dt>Room</dt>
+                  <dd>{{ selectedTrendProfile.room }}</dd>
+                </div>
+                <div class="focus-panel__row">
+                  <dt>Rhythm</dt>
+                  <dd>{{ selectedTrendProfile.rhythm }}</dd>
+                </div>
+                <div v-if="latestTrendMoment" class="focus-panel__row is-latest">
+                  <dt>Latest</dt>
+                  <dd>
+                    {{ latestTrendMoment.emotion }}
+                    <span class="focus-panel__time">{{ latestTrendMoment.timestamp }}</span>
+                  </dd>
+                </div>
+              </dl>
+
+              <!-- 4. Guardrail (lowest weight) -->
+              <div class="focus-panel__note">
+                <p class="focus-panel__note-inner">
+                  Lines and chips are prompts for reflection, not diagnoses. A rise or dip is a reason to pause with context, not to judge or optimise a number.
+                </p>
+              </div>
+            </aside>
+
+            <div class="tone-panel panel-surface">
+              <div class="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+                <div class="title-block">
+                  <p class="t-kicker text-care-sageDark">7-day tone</p>
+                  <h3 class="kicker-gap t-h3 text-care-ink">Emotional tone tracker · {{ selectedTrendResident }}</h3>
+                  <p class="title-gap t-caption t-muted">{{ selectedTrendResident === 'All residents' ? 'One tone line across the whole home, with every recorded moment kept visible behind it.' : 'One tone line for the week, with every recorded moment kept visible behind it.' }}</p>
+                </div>
+              </div>
+              <div class="chart-wrap tall mt-4">
+                <canvas ref="trendChart" aria-label="Seven day emotional tone trend chart"></canvas>
+              </div>
+
+              <div class="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 border-t border-care-sage/20 pt-4">
+                <span v-for="item in trendLegend" :key="item.label" class="inline-flex items-center gap-1.5 t-caption t-muted">
+                  <span class="h-2.5 w-5 rounded-full" :style="{ backgroundColor: item.color, opacity: item.opacity || 1 }"></span>
+                  {{ item.label }}
+                </span>
+              </div>
+
+              <div v-if="trendMilestones.length" class="mt-4 grid gap-2 md:grid-cols-3">
+                <div
+                  v-for="milestone in trendMilestones"
+                  :key="milestone.label"
+                  class="rounded-2xl border border-care-sage/20 bg-care-mist/70 px-4 py-3"
+                >
+                  <p class="t-kicker text-care-sageDark">{{ milestone.label }}</p>
+                  <p class="mt-1.5 t-body-sm text-care-ink">{{ milestone.text }}</p>
+                </div>
+              </div>
+
+              <p class="mt-4 t-body-sm t-muted">{{ trendSummary }}</p>
+            </div>
+          </div>
+
+          <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
+            <div class="grid gap-5 lg:grid-cols-5">
+              <div class="flex flex-col rounded-2xl bg-care-mist/60 p-4 ring-1 ring-care-sage/20 sm:p-5 lg:col-span-3">
+                <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-care-sage/20 pb-3">
+                  <div class="title-block">
+                    <p class="t-kicker text-care-sageDark">24-hour rhythm</p>
+                    <p class="title-gap t-caption t-muted">Petal colour = dominant emotion · length = how often</p>
+                  </div>
+                  <p class="t-caption t-strong text-care-ink">{{ selectedTrendResident === 'All residents' ? 'Whole home' : selectedTrendResident }} · circadian view</p>
+                </div>
+                <div class="flex flex-1 items-center justify-center pt-2">
+                  <div class="d3-wrap w-full" style="height: 20rem;">
+                    <svg ref="polarChart" role="img" aria-label="24 hour polar clock showing emotional moments by time of day"></svg>
+                    <div ref="polarTooltip" class="d3-tooltip"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-3 lg:col-span-2">
+                <div class="title-block">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
+                    <p class="t-kicker text-care-sageDark">Circadian view</p>
+                    <span class="data-mode-toggle"><span class="dot"></span>Demo data</span>
+                  </div>
+                  <h3 class="kicker-gap t-h3 text-care-ink">When moments appear across the day</h3>
+                  <p class="title-gap t-body-sm t-muted">Radial 30-minute bins. Petal colour = dominant emotion at that hour, length = how often it was observed.</p>
+                </div>
+
+                <div class="mt-1 grid gap-2.5">
+                  <div class="rounded-2xl border border-care-sage/25 bg-care-mist/60 px-4 py-3">
+                    <div class="flex items-center justify-between gap-2">
+                      <p class="t-kicker text-care-sageDark">Morning</p>
+                      <span class="rounded-full bg-white/70 px-2 py-0.5 t-badge text-care-sageDark">06 – 11</span>
+                    </div>
+                    <p class="mt-1 t-body-sm text-care-ink">{{ circadianPeriodSummaries.morning }}</p>
+                  </div>
+                  <div class="rounded-2xl border border-care-sage/25 bg-care-mist/60 px-4 py-3">
+                    <div class="flex items-center justify-between gap-2">
+                      <p class="t-kicker text-care-sageDark">Sundown</p>
+                      <span class="rounded-full bg-white/70 px-2 py-0.5 t-badge text-care-sageDark">15 – 19</span>
+                    </div>
+                    <p class="mt-1 t-body-sm text-care-ink">{{ circadianPeriodSummaries.sundown }}</p>
+                  </div>
+                  <div class="rounded-2xl border border-care-sage/25 bg-care-mist/60 px-4 py-3">
+                    <div class="flex items-center justify-between gap-2">
+                      <p class="t-kicker text-care-sageDark">Evening</p>
+                      <span class="rounded-full bg-white/70 px-2 py-0.5 t-badge text-care-sageDark">20 – 05</span>
+                    </div>
+                    <p class="mt-1 t-body-sm text-care-ink">{{ circadianPeriodSummaries.evening }}</p>
+                  </div>
+                </div>
+
+                <details class="method-card mt-auto">
+                  <summary>How this is computed</summary>
+                  <div class="method-body">
+                    Moments are bucketed into 48 half-hour bins by local timestamp. Each petal's <em>colour</em> is the dominant emotion in that bin; its <em>radial length</em> is <code>√(count)</code>, scaled against the busiest bin. Sundowning is reported for 15:00–19:00, a clinically observed time of restlessness in dementia care.
+                    <div class="method-cite">Khachiyants, Trinkle, Son &amp; Kim (2011). <em>Sundown syndrome in persons with dementia.</em> Psychiatry Investigation. · Compatible with actigraphy / HRV time-series data sources.</div>
+                  </div>
+                </details>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-[1.5rem] bg-white/88 p-5 shadow-soft ring-1 ring-white/80 sm:p-6">
+            <div class="mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
+              <div class="title-block">
+                <p class="t-kicker text-care-sageDark">Context map</p>
+                <h3 class="kicker-gap t-h3 text-care-ink">Emotional moments in daily care routines</h3>
+                <p class="title-gap max-w-3xl t-body-sm t-muted">
+                  Where moments appear across daily routines — prompts for team reflection, not fixed labels.
+                </p>
+              </div>
+              <div class="rounded-2xl bg-care-mist px-4 py-3 t-body-sm t-strong text-care-sageDark">
+                {{ contextMapScope }}
+              </div>
+            </div>
+
+            <div class="overflow-x-auto soft-scrollbar pb-2">
+              <div class="min-w-[42rem] space-y-2">
+                <div class="grid grid-cols-[10rem_repeat(5,minmax(5.75rem,1fr))] gap-2 px-2 t-caption t-strong t-muted">
+                  <span>Context</span>
+                  <span v-for="emotion in emotions" :key="emotion" class="flex min-w-0 flex-col items-center gap-1.5 text-center" :title="emotion">
+                    <span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full" :style="emotionIconStyle(emotion)">
+                      <img class="block h-4 w-4" :src="emotionVisual(emotion).icon" alt="" />
+                    </span>
+                    <span class="block w-full truncate t-caption t-muted">{{ emotion }}</span>
+                  </span>
+                </div>
+                <div
+                  v-for="row in contextEmotionMap"
+                  :key="row.label"
+                  class="grid grid-cols-[10rem_repeat(5,minmax(5.75rem,1fr))] items-stretch gap-2"
+                >
+                  <div class="rounded-2xl bg-care-mist px-4 py-3">
+                    <p class="t-body-sm t-strong text-care-ink">{{ row.label }}</p>
+                    <p class="mt-1 t-caption t-muted">{{ row.total }} moment{{ row.total === 1 ? '' : 's' }}</p>
+                  </div>
+                  <div
+                    v-for="cell in row.cells"
+                    :key="`${row.label}-${cell.emotion}`"
+                    class="flex min-h-[4.25rem] flex-col items-center justify-center rounded-2xl border px-2 py-3 text-center transition"
+                    :style="contextCellStyle(cell.emotion, cell.count, contextMapMaxCount)"
+                  >
+                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full" :style="emotionIconStyle(cell.emotion)" aria-hidden="true">
+                      <img class="block h-[1.125rem] w-[1.125rem]" :src="emotionVisual(cell.emotion).icon" alt="" />
+                    </span>
+                    <span class="mt-1 t-body-sm t-strong text-care-ink">{{ cell.count }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-5 rounded-2xl border border-care-sage/25 bg-care-mist/70 px-5 py-4">
+              <p class="t-kicker text-care-sageDark">Read with care</p>
+              <p class="mt-1.5 t-body text-care-ink">{{ contextGuardrail }}</p>
+            </div>
+          </div>
+
+          <section class="insight-panel" aria-label="AI insight">
+            <header class="insight-panel__head">
+              <div class="insight-panel__brand">
+                <p class="t-kicker text-care-sageDark">AI insight</p>
+                <span class="ai-chip">AI-Powered</span>
+                <p class="insight-panel__hint">Handover prompt · not a diagnosis</p>
+              </div>
+            </header>
+
+            <p class="insight-panel__body">{{ overviewInsight }}</p>
+
+            <div class="insight-panel__meta">
+              <span class="insight-panel__stat">
+                Signals <strong>{{ moments.length }}</strong>
+              </span>
+              <span class="insight-panel__stat">
+                Focus <strong>{{ selectedTrendResident }}</strong>
+              </span>
+            </div>
+          </section>
+
+        </div>
+
+        <div v-if="gentleHighlights.length" class="grid gap-3">
+          <div
+            v-for="highlight in gentleHighlights"
+            :key="highlight"
+            class="rounded-[1.25rem] border border-care-blue/25 bg-white/82 px-5 py-4 t-body text-care-ink shadow-sm"
+          >
+            {{ highlight }}
+          </div>
+        </div>
+      </section>
+      </transition>
+    </main>
+
+    <footer class="mx-auto max-w-7xl px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+      <hr class="mb-5 border-care-sage/25" />
+      <p class="text-center t-micro t-muted">
+        CareWeave is a design prototype by <strong class="t-strong t-muted">Yuan Liu</strong>.<br />
+        All names, profiles, and moments are fictitious. Not for clinical use. No data is collected.<br />
+        Built with an awareness of the ethical sensitivity of recording emotional data in care settings.
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    // [Perf] All CDN libs above are loaded with `defer`, so they only become
+    // available after DOMContentLoaded. We therefore boot the Vue app inside
+    // a DOMContentLoaded listener — running this synchronously would crash
+    // because `Vue` is not yet defined at inline-script execution time.
+    document.addEventListener('DOMContentLoaded', () => {
+    const { createApp, nextTick } = Vue;
+
+    createApp({
+      data() {
+        const residents = [
+          'Mrs. O’Sullivan',
+          'Mr. Johansson',
+          'Signora Rossi',
+          'Herr Weber',
+          'Madame Dubois'
+        ];
+
+        const promptTemplates = {
+          'Warm connection': '{Name} reached out warmly today. What might have helped them feel safe enough to do that? Was there anything different in the morning routine?',
+          'Withdrawn / low': '{Name} seemed quieter than usual. Have you noticed any changes in their eating, sleeping, or movement today that could be linked?',
+          'Agitated / restless': '{Name} appeared unsettled. Could they be looking for something familiar—a photo, a song, or a routine that was important to them?',
+          'Tearful / emotional': "{Name}'s tears might be a response to something in their environment. What was happening around them just before this moment?",
+          'Quietly settled': 'These quiet moments with {Name} are the foundation of trust. How are you feeling yourself after this shift? Taking care of you matters too.'
+        };
+
+        const buildPrompt = (emotion, resident) => promptTemplates[emotion].replace('{Name}', resident);
+
+        const residentProfiles = {
+          'Mrs. O’Sullivan': {
+            initials: 'MO',
+            country: 'Ireland',
+            room: 'Willow room',
+            rhythm: 'Morning tea, window seat, Irish folk songs',
+            photo: 'assets/portraits/thumbs/mrs-osullivan.webp',
+            accent: '#8fb5a1',
+            hair: '#d8d0bf',
+            skin: '#f0c9a5',
+            top: '#6aa6a5'
+          },
+          'Mr. Johansson': {
+            initials: 'MJ',
+            country: 'Sweden',
+            room: 'Birch room',
+            rhythm: 'Newspaper, quiet lunch, garden path',
+            photo: 'assets/portraits/thumbs/mr-johansson.webp',
+            accent: '#7d9dbb',
+            hair: '#c4c9c6',
+            skin: '#e9bd93',
+            top: '#637f9a'
+          },
+          'Signora Rossi': {
+            initials: 'SR',
+            country: 'Italy',
+            room: 'Olive room',
+            rhythm: 'Music, herbs, folding linen together',
+            photo: 'assets/portraits/thumbs/signora-rossi.webp',
+            accent: '#c8aa83',
+            hair: '#6f5547',
+            skin: '#dfae86',
+            top: '#a97f4f'
+          },
+          'Herr Weber': {
+            initials: 'HW',
+            country: 'Germany',
+            room: 'Maple room',
+            rhythm: 'Work bag, coat by the door, early breakfast',
+            photo: 'assets/portraits/thumbs/herr-weber.webp',
+            accent: '#6aa6a5',
+            hair: '#b2b0a5',
+            skin: '#e7bc91',
+            top: '#4f7f68'
+          },
+          'Madame Dubois': {
+            initials: 'MD',
+            country: 'France',
+            room: 'Rose room',
+            rhythm: 'Napkins, soft dining room, stories of Lyon',
+            photo: 'assets/portraits/thumbs/madame-dubois.webp',
+            accent: '#c69aa9',
+            hair: '#c8c2ba',
+            skin: '#ecc29a',
+            top: '#ad7187'
+          }
+        };
+
+        return {
+          tabs: ['Overview', 'Record', 'History'],
+          activeTab: 'Overview',
+          residents,
+          residentProfiles,
+          selectedTrendResident: 'Herr Weber',
+          emotions: Object.keys(promptTemplates),
+          emotionEmoji: {
+            'Warm connection': '😊',
+            'Withdrawn / low': '🌧️',
+            'Agitated / restless': '⚡',
+            'Tearful / emotional': '💧',
+            'Quietly settled': '🌿'
+          },
+          emotionVisuals: {
+            'Warm connection': {
+              icon: 'assets/icons/warm-connection.svg?v=3',
+              light: '#f6e9c4',
+              mid: '#daba6a',
+              dark: '#c89a2e',
+              iconColor: '#8c6c20',
+              score: 1.2
+            },
+            'Withdrawn / low': {
+              icon: 'assets/icons/withdrawn-low.svg?v=3',
+              light: '#dceaf3',
+              mid: '#8ca9bc',
+              dark: '#567d98',
+              iconColor: '#3c586a',
+              score: -0.8
+            },
+            'Agitated / restless': {
+              icon: 'assets/icons/agitated-restless.svg?v=3',
+              light: '#f1d2c4',
+              mid: '#cf8c78',
+              dark: '#b85d45',
+              iconColor: '#814130',
+              score: -1.3
+            },
+            'Tearful / emotional': {
+              icon: 'assets/icons/tearful-emotional.svg?v=3',
+              light: '#e4e7f4',
+              mid: '#a1a7c6',
+              dark: '#747da8',
+              iconColor: '#515876',
+              score: -1.0
+            },
+            'Quietly settled': {
+              icon: 'assets/icons/quietly-settled.svg?v=3',
+              light: '#dcebe2',
+              mid: '#91b19e',
+              dark: '#5f8b70',
+              iconColor: '#43614e',
+              score: 0.8
+            }
+          },
+          smartTagRules: [
+            { emotion: 'Warm connection', keywords: ['smile', 'held hand', 'laughed', 'reached out', 'warm', 'kiss'] },
+            { emotion: 'Withdrawn / low', keywords: ['quiet', 'silent', 'no response', 'wouldn’t eat', "wouldn't eat", 'stayed in bed'] },
+            { emotion: 'Agitated / restless', keywords: ['shouting', 'pacing', 'looking for', 'restless', 'can’t sit still', "can't sit still"] },
+            { emotion: 'Tearful / emotional', keywords: ['tears', 'crying', 'upset', 'sobbing', 'weep'] },
+            { emotion: 'Quietly settled', keywords: ['calm', 'peaceful', 'sat together', 'watched', 'relaxed'] }
+          ],
+          contextRules: [
+            { label: 'Garden time', keywords: ['garden', 'herb', 'basil', 'birds', 'sun'] },
+            { label: 'Dining / meals', keywords: ['breakfast', 'lunch', 'tea', 'dining', 'soup', 'cook', 'table'] },
+            { label: 'Music & memory', keywords: ['music', 'song', 'opera', 'sang', 'hummed', 'photo', 'album', 'memory', 'story', 'postcards'] },
+            { label: 'Handover / routine', keywords: ['handover', 'routine', 'visitor', 'bus', 'front door', 'locked door', 'corridor', 'dusk'] },
+            { label: 'Quiet room / window', keywords: ['room', 'window', 'bed', 'doorway', 'alone', 'chair'] }
+          ],
+          promptTemplates,
+          emotionChart: null,
+          // Polar Clock (D3) replaces the legacy Chart.js residentChart.
+          // Tracked here so destroyCharts() can reset its state.
+          polarRendered: false,
+          trendChart: null,
+          chartRenderFrame: null,
+          chartRenderRequestId: 0,
+          // [Perf] Debounce window resize so Polar Clock is not fully rebuilt
+          // on every mousemove-pixel during a drag-resize.
+          chartResizeTimer: null,
+          // [Perf #6] When Overview is hidden (v-show), mark dirty and refresh
+          // charts only when the user returns — avoids 0-width canvas paints.
+          chartsDirty: true,
+          historyFilter: 'Signora Rossi',
+          historyDateFrom: '2026-05-06',
+          historyDateTo: '2026-05-19',
+          currentHistoryPage: 1,
+          pageSize: 5,
+          suggestedEmotion: '',
+          suggestionMessage: '',
+          isReflecting: false,
+          latestReflection: null,
+          feedbackMessage: '',
+          formError: '',
+          // Shown after a successful Save moment (toast + inline banner).
+          saveSuccess: null,
+          saveSuccessTimer: null,
+          form: {
+            resident: '',
+            emotion: '',
+            note: ''
+          },
+          emotionStyles: {
+            'Warm connection': {
+              idle: 'border-[#ead2bd] bg-[#fbf2ea] text-[#8a4f2f] hover:border-[#b66a3c]',
+              selected: 'border-[#b66a3c] bg-[#f4dcc5] text-[#713f25] shadow-sm',
+              badge: 'bg-[#f4dcc5] text-[#713f25]'
+            },
+            'Withdrawn / low': {
+              idle: 'border-[#cbdde8] bg-[#f2f7fa] text-[#496b82] hover:border-[#567d98]',
+              selected: 'border-[#567d98] bg-[#dceaf3] text-[#365b72] shadow-sm',
+              badge: 'bg-[#dceaf3] text-[#365b72]'
+            },
+            'Agitated / restless': {
+              idle: 'border-[#e8c9bd] bg-[#fbf0eb] text-[#8d4634] hover:border-[#b85d45]',
+              selected: 'border-[#b85d45] bg-[#f1d2c4] text-[#743322] shadow-sm',
+              badge: 'bg-[#f1d2c4] text-[#743322]'
+            },
+            'Tearful / emotional': {
+              idle: 'border-[#d6daeb] bg-[#f4f5fb] text-[#60698f] hover:border-[#747da8]',
+              selected: 'border-[#747da8] bg-[#e4e7f4] text-[#4d557d] shadow-sm',
+              badge: 'bg-[#e4e7f4] text-[#4d557d]'
+            },
+            'Quietly settled': {
+              idle: 'border-[#cddfd4] bg-[#f2f8f4] text-[#4f765e] hover:border-[#5f8b70]',
+              selected: 'border-[#5f8b70] bg-[#dcebe2] text-[#3d654c] shadow-sm',
+              badge: 'bg-[#dcebe2] text-[#3d654c]'
+            }
+          },
+          moments: [
+            {
+              id: 1,
+              timestamp: '2026-05-13 10:15',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Quietly settled',
+              note: 'Sat calmly by the window after morning tea and watched the rain with Ana.',
+              aiPrompt: buildPrompt('Quietly settled', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 2,
+              timestamp: '2026-05-13 14:40',
+              resident: 'Mr. Johansson',
+              emotion: 'Withdrawn / low',
+              note: 'Stayed apart from the reminiscence group and answered softly when Lars checked in.',
+              aiPrompt: buildPrompt('Withdrawn / low', 'Mr. Johansson')
+            },
+            {
+              id: 3,
+              timestamp: '2026-05-13 16:05',
+              resident: 'Signora Rossi',
+              emotion: 'Warm connection',
+              note: 'Smiled and hummed along when an old Italian song played during afternoon tea.',
+              aiPrompt: buildPrompt('Warm connection', 'Signora Rossi')
+            },
+            {
+              id: 4,
+              timestamp: '2026-05-14 09:30',
+              resident: 'Herr Weber',
+              emotion: 'Agitated / restless',
+              note: 'Walked repeatedly towards the corridor before personal care and asked about his coat.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Herr Weber')
+            },
+            {
+              id: 5,
+              timestamp: '2026-05-14 15:20',
+              resident: 'Madame Dubois',
+              emotion: 'Tearful / emotional',
+              note: 'Became tearful when the dining room grew noisy before the late lunch sitting.',
+              aiPrompt: buildPrompt('Tearful / emotional', 'Madame Dubois')
+            },
+            {
+              id: 6,
+              timestamp: '2026-05-15 11:10',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Warm connection',
+              note: 'Held my hand and smiled during a quiet chat after morning tea.',
+              aiPrompt: buildPrompt('Warm connection', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 7,
+              timestamp: '2026-05-15 13:50',
+              resident: 'Mr. Johansson',
+              emotion: 'Withdrawn / low',
+              note: 'Ate very little at lunch and preferred to sit near the doorway.',
+              aiPrompt: buildPrompt('Withdrawn / low', 'Mr. Johansson')
+            },
+            {
+              id: 8,
+              timestamp: '2026-05-16 10:05',
+              resident: 'Signora Rossi',
+              emotion: 'Quietly settled',
+              note: 'Relaxed in the garden with a blanket and watched the herbs being watered.',
+              aiPrompt: buildPrompt('Quietly settled', 'Signora Rossi')
+            },
+            {
+              id: 9,
+              timestamp: '2026-05-16 17:30',
+              resident: 'Herr Weber',
+              emotion: 'Agitated / restless',
+              note: 'Seemed unsettled during evening handover and asked several times when the bus would come.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Herr Weber')
+            },
+            {
+              id: 10,
+              timestamp: '2026-05-17 12:25',
+              resident: 'Madame Dubois',
+              emotion: 'Warm connection',
+              note: 'Laughed with Ana while folding napkins and spoke about summers in Lyon.',
+              aiPrompt: buildPrompt('Warm connection', 'Madame Dubois')
+            },
+            {
+              id: 11,
+              timestamp: '2026-05-18 09:45',
+              resident: 'Mr. Johansson',
+              emotion: 'Withdrawn / low',
+              note: 'Declined the morning paper and stayed in his room until Lars invited him for tea.',
+              aiPrompt: buildPrompt('Withdrawn / low', 'Mr. Johansson')
+            },
+            {
+              id: 12,
+              timestamp: '2026-05-18 15:10',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Quietly settled',
+              note: 'Rested comfortably after the music group and nodded when asked if she wanted the window open.',
+              aiPrompt: buildPrompt('Quietly settled', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 13,
+              timestamp: '2026-05-19 10:35',
+              resident: 'Herr Weber',
+              emotion: 'Agitated / restless',
+              note: 'Looked for his old work bag before breakfast but settled after seeing a familiar photo.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Herr Weber')
+            },
+            {
+              id: 14,
+              timestamp: '2026-05-19 14:05',
+              resident: 'Signora Rossi',
+              emotion: 'Warm connection',
+              note: 'Invited another resident to sit beside her during garden time.',
+              aiPrompt: buildPrompt('Warm connection', 'Signora Rossi')
+            },
+            {
+              id: 15,
+              timestamp: '2026-05-12 09:20',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Warm connection',
+              note: 'Sang quietly along to a familiar Irish tune and tapped her fingers on the armrest.',
+              aiPrompt: buildPrompt('Warm connection', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 16,
+              timestamp: '2026-05-12 11:45',
+              resident: 'Signora Rossi',
+              emotion: 'Quietly settled',
+              note: 'Arranged fresh basil on the kitchen windowsill and smiled at the smell.',
+              aiPrompt: buildPrompt('Quietly settled', 'Signora Rossi')
+            },
+            {
+              id: 17,
+              timestamp: '2026-05-12 15:30',
+              resident: 'Mr. Johansson',
+              emotion: 'Withdrawn / low',
+              note: 'Sat alone in the garden for most of the afternoon and declined offers to join the group.',
+              aiPrompt: buildPrompt('Withdrawn / low', 'Mr. Johansson')
+            },
+            {
+              id: 18,
+              timestamp: '2026-05-12 16:50',
+              resident: 'Herr Weber',
+              emotion: 'Agitated / restless',
+              note: 'Paced near the front entrance and repeatedly checked his watch before dinner.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Herr Weber')
+            },
+            {
+              id: 19,
+              timestamp: '2026-05-12 10:10',
+              resident: 'Madame Dubois',
+              emotion: 'Tearful / emotional',
+              note: 'Became emotional while looking through a photo album of Lyon brought by her daughter.',
+              aiPrompt: buildPrompt('Tearful / emotional', 'Madame Dubois')
+            },
+            {
+              id: 20,
+              timestamp: '2026-05-13 08:45',
+              resident: 'Herr Weber',
+              emotion: 'Quietly settled',
+              note: 'Sat calmly with his coffee and newspaper, nodding along to the morning radio.',
+              aiPrompt: buildPrompt('Quietly settled', 'Herr Weber')
+            },
+            {
+              id: 21,
+              timestamp: '2026-05-13 11:30',
+              resident: 'Madame Dubois',
+              emotion: 'Warm connection',
+              note: 'Taught Ana how to fold napkins the way her mother did in Lyon.',
+              aiPrompt: buildPrompt('Warm connection', 'Madame Dubois')
+            },
+            {
+              id: 22,
+              timestamp: '2026-05-13 13:15',
+              resident: 'Signora Rossi',
+              emotion: 'Agitated / restless',
+              note: 'Became frustrated when she couldn\'t find her favourite scarf before lunch.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Signora Rossi')
+            },
+            {
+              id: 23,
+              timestamp: '2026-05-14 10:30',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Tearful / emotional',
+              note: 'Tears welled up during a quiet moment by the window — said she missed her sister.',
+              aiPrompt: buildPrompt('Tearful / emotional', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 24,
+              timestamp: '2026-05-14 11:00',
+              resident: 'Mr. Johansson',
+              emotion: 'Warm connection',
+              note: 'Opened up about his old sailing days after Lars asked about a photograph in his room.',
+              aiPrompt: buildPrompt('Warm connection', 'Mr. Johansson')
+            },
+            {
+              id: 25,
+              timestamp: '2026-05-14 16:40',
+              resident: 'Signora Rossi',
+              emotion: 'Quietly settled',
+              note: 'Listened to Italian opera on the radio and tapped her foot gently to the rhythm.',
+              aiPrompt: buildPrompt('Quietly settled', 'Signora Rossi')
+            },
+            {
+              id: 26,
+              timestamp: '2026-05-15 08:30',
+              resident: 'Madame Dubois',
+              emotion: 'Quietly settled',
+              note: 'Enjoyed a calm breakfast by herself, watching the birds outside the dining room.',
+              aiPrompt: buildPrompt('Quietly settled', 'Madame Dubois')
+            },
+            {
+              id: 27,
+              timestamp: '2026-05-15 14:20',
+              resident: 'Herr Weber',
+              emotion: 'Withdrawn / low',
+              note: 'Skipped the afternoon group activity and stayed in his room with the door ajar.',
+              aiPrompt: buildPrompt('Withdrawn / low', 'Herr Weber')
+            },
+            {
+              id: 28,
+              timestamp: '2026-05-15 16:10',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Quietly settled',
+              note: 'Knitted peacefully in the common room while chatting softly with Signora Rossi.',
+              aiPrompt: buildPrompt('Quietly settled', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 29,
+              timestamp: '2026-05-16 09:15',
+              resident: 'Mr. Johansson',
+              emotion: 'Warm connection',
+              note: 'Shared a genuine laugh with Ana during his morning walk around the garden path.',
+              aiPrompt: buildPrompt('Warm connection', 'Mr. Johansson')
+            },
+            {
+              id: 30,
+              timestamp: '2026-05-16 11:50',
+              resident: 'Madame Dubois',
+              emotion: 'Agitated / restless',
+              note: 'Grew impatient waiting for lunch and kept adjusting the table setting.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Madame Dubois')
+            },
+            {
+              id: 31,
+              timestamp: '2026-05-16 14:30',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Warm connection',
+              note: 'Told Ana a story about dancing at a céilí in Cork when she was a young woman.',
+              aiPrompt: buildPrompt('Warm connection', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 32,
+              timestamp: '2026-05-17 08:50',
+              resident: 'Signora Rossi',
+              emotion: 'Tearful / emotional',
+              note: 'Cried softly when a song reminded her of her late husband. Accepted a gentle hand on her shoulder.',
+              aiPrompt: buildPrompt('Tearful / emotional', 'Signora Rossi')
+            },
+            {
+              id: 33,
+              timestamp: '2026-05-17 10:20',
+              resident: 'Herr Weber',
+              emotion: 'Warm connection',
+              note: 'Helped Lars carry chairs for the morning circle group and seemed proud to be useful.',
+              aiPrompt: buildPrompt('Warm connection', 'Herr Weber')
+            },
+            {
+              id: 34,
+              timestamp: '2026-05-17 13:40',
+              resident: 'Mr. Johansson',
+              emotion: 'Quietly settled',
+              note: 'Read the newspaper cover to cover and remarked on an article about the archipelago.',
+              aiPrompt: buildPrompt('Quietly settled', 'Mr. Johansson')
+            },
+            {
+              id: 35,
+              timestamp: '2026-05-18 11:15',
+              resident: 'Madame Dubois',
+              emotion: 'Warm connection',
+              note: 'Complimented the cook on the soup and shared a memory of her grandmother\'s kitchen.',
+              aiPrompt: buildPrompt('Warm connection', 'Madame Dubois')
+            },
+            {
+              id: 36,
+              timestamp: '2026-05-18 16:25',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Withdrawn / low',
+              note: 'Seemed tired and distant during the afternoon social. Preferred to stay by the window alone.',
+              aiPrompt: buildPrompt('Withdrawn / low', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 37,
+              timestamp: '2026-05-19 08:15',
+              resident: 'Signora Rossi',
+              emotion: 'Warm connection',
+              note: 'Greeted Ana with a warm hug and said the morning light reminded her of Tuscany.',
+              aiPrompt: buildPrompt('Warm connection', 'Signora Rossi')
+            },
+            {
+              id: 38,
+              timestamp: '2026-05-13 16:30',
+              resident: 'Mr. Johansson',
+              emotion: 'Warm connection',
+              note: 'Smiled for the first time in days when Lars brought him a cup of his favourite Earl Grey.',
+              aiPrompt: buildPrompt('Warm connection', 'Mr. Johansson')
+            },
+            {
+              id: 39,
+              timestamp: '2026-05-14 08:15',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Warm connection',
+              note: 'Woke up humming and greeted the morning carer with a bright smile.',
+              aiPrompt: buildPrompt('Warm connection', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 40,
+              timestamp: '2026-05-14 14:00',
+              resident: 'Herr Weber',
+              emotion: 'Agitated / restless',
+              note: 'Insisted on waiting by the front door for a visitor who was not scheduled to arrive.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Herr Weber')
+            },
+            {
+              id: 41,
+              timestamp: '2026-05-15 10:00',
+              resident: 'Signora Rossi',
+              emotion: 'Warm connection',
+              note: 'Taught Ana an Italian lullaby and laughed at her pronunciation.',
+              aiPrompt: buildPrompt('Warm connection', 'Signora Rossi')
+            },
+            {
+              id: 42,
+              timestamp: '2026-05-15 15:30',
+              resident: 'Madame Dubois',
+              emotion: 'Tearful / emotional',
+              note: 'Cried when the afternoon activity reminded her of her late husband\'s birthday.',
+              aiPrompt: buildPrompt('Tearful / emotional', 'Madame Dubois')
+            },
+            {
+              id: 43,
+              timestamp: '2026-05-16 08:45',
+              resident: 'Mr. Johansson',
+              emotion: 'Withdrawn / low',
+              note: 'Refused breakfast and sat facing the wall in his room.',
+              aiPrompt: buildPrompt('Withdrawn / low', 'Mr. Johansson')
+            },
+            {
+              id: 44,
+              timestamp: '2026-05-16 13:30',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Quietly settled',
+              note: 'Knitted peacefully in the garden while listening to the birds.',
+              aiPrompt: buildPrompt('Quietly settled', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 45,
+              timestamp: '2026-05-16 16:00',
+              resident: 'Herr Weber',
+              emotion: 'Agitated / restless',
+              note: 'Paced the corridor again before dinner and asked when the bus would arrive.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Herr Weber')
+            },
+            {
+              id: 46,
+              timestamp: '2026-05-17 09:30',
+              resident: 'Madame Dubois',
+              emotion: 'Warm connection',
+              note: 'Proudly showed Ana her collection of vintage postcards from Lyon.',
+              aiPrompt: buildPrompt('Warm connection', 'Madame Dubois')
+            },
+            {
+              id: 47,
+              timestamp: '2026-05-17 11:00',
+              resident: 'Signora Rossi',
+              emotion: 'Agitated / restless',
+              note: 'Grew frustrated trying to find a specific herb in the garden and became short-tempered.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Signora Rossi')
+            },
+            {
+              id: 48,
+              timestamp: '2026-05-17 15:00',
+              resident: 'Mr. Johansson',
+              emotion: 'Withdrawn / low',
+              note: 'Sat alone in the common room and didn\'t respond when others greeted him.',
+              aiPrompt: buildPrompt('Withdrawn / low', 'Mr. Johansson')
+            },
+            {
+              id: 49,
+              timestamp: '2026-05-18 08:30',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Tearful / emotional',
+              note: 'Became tearful during morning care and asked for her sister who lives abroad.',
+              aiPrompt: buildPrompt('Tearful / emotional', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 50,
+              timestamp: '2026-05-18 10:00',
+              resident: 'Herr Weber',
+              emotion: 'Quietly settled',
+              note: 'Sat calmly by the window with his coffee after a difficult morning.',
+              aiPrompt: buildPrompt('Quietly settled', 'Herr Weber')
+            },
+            {
+              id: 51,
+              timestamp: '2026-05-18 14:30',
+              resident: 'Signora Rossi',
+              emotion: 'Quietly settled',
+              note: 'Enjoyed the afternoon sun in the garden and chatted quietly with Ana.',
+              aiPrompt: buildPrompt('Quietly settled', 'Signora Rossi')
+            },
+            {
+              id: 52,
+              timestamp: '2026-05-19 09:00',
+              resident: 'Madame Dubois',
+              emotion: 'Warm connection',
+              note: 'Greeted everyone in the dining room with a cheerful "bonjour" and a smile.',
+              aiPrompt: buildPrompt('Warm connection', 'Madame Dubois')
+            },
+            {
+              id: 53,
+              timestamp: '2026-05-19 11:30',
+              resident: 'Mr. Johansson',
+              emotion: 'Warm connection',
+              note: 'Opened up during a one-to-one walk and talked about his grandchildren.',
+              aiPrompt: buildPrompt('Warm connection', 'Mr. Johansson')
+            },
+            {
+              id: 54,
+              timestamp: '2026-05-19 13:00',
+              resident: 'Herr Weber',
+              emotion: 'Agitated / restless',
+              note: 'Became visibly anxious when the lunch routine changed unexpectedly.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Herr Weber')
+            },
+            {
+              id: 55,
+              timestamp: '2026-05-19 16:00',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Warm connection',
+              note: 'Sang an Irish ballad for Ana and another resident before evening tea.',
+              aiPrompt: buildPrompt('Warm connection', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 56,
+              timestamp: '2026-05-13 09:00',
+              resident: 'Signora Rossi',
+              emotion: 'Agitated / restless',
+              note: 'Argued loudly with another resident at breakfast over seating arrangements.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Signora Rossi')
+            },
+            {
+              id: 57,
+              timestamp: '2026-05-15 09:00',
+              resident: 'Herr Weber',
+              emotion: 'Agitated / restless',
+              note: 'Shouted at a carer who tried to help him change his shirt before breakfast.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Herr Weber')
+            },
+            {
+              id: 58,
+              timestamp: '2026-05-15 17:00',
+              resident: 'Herr Weber',
+              emotion: 'Agitated / restless',
+              note: 'Pounded on the locked front door at dusk, demanding to go home.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Herr Weber')
+            },
+            {
+              id: 59,
+              timestamp: '2026-05-16 10:00',
+              resident: 'Mr. Johansson',
+              emotion: 'Withdrawn / low',
+              note: 'Sat motionless in his chair for nearly two hours, refusing all interaction.',
+              aiPrompt: buildPrompt('Withdrawn / low', 'Mr. Johansson')
+            },
+            {
+              id: 60,
+              timestamp: '2026-05-16 15:00',
+              resident: 'Madame Dubois',
+              emotion: 'Warm connection',
+              note: 'Shared a beautiful story about meeting her husband at a café in Lyon in 1952.',
+              aiPrompt: buildPrompt('Warm connection', 'Madame Dubois')
+            },
+            {
+              id: 61,
+              timestamp: '2026-05-17 16:00',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Warm connection',
+              note: 'Led a spontaneous sing-along in the common room with two other residents.',
+              aiPrompt: buildPrompt('Warm connection', 'Mrs. O’Sullivan')
+            },
+            {
+              id: 62,
+              timestamp: '2026-05-18 12:00',
+              resident: 'Signora Rossi',
+              emotion: 'Tearful / emotional',
+              note: 'Wept during lunch after receiving a letter from her granddaughter in Milan.',
+              aiPrompt: buildPrompt('Tearful / emotional', 'Signora Rossi')
+            },
+            {
+              id: 63,
+              timestamp: '2026-05-18 17:00',
+              resident: 'Herr Weber',
+              emotion: 'Agitated / restless',
+              note: 'Tried to leave the building three times before dinner, becoming increasingly distressed.',
+              aiPrompt: buildPrompt('Agitated / restless', 'Herr Weber')
+            },
+            {
+              id: 64,
+              timestamp: '2026-05-19 08:00',
+              resident: 'Mr. Johansson',
+              emotion: 'Withdrawn / low',
+              note: 'Refused to get out of bed and turned his face to the wall.',
+              aiPrompt: buildPrompt('Withdrawn / low', 'Mr. Johansson')
+            },
+            {
+              id: 65,
+              timestamp: '2026-05-19 15:00',
+              resident: 'Madame Dubois',
+              emotion: 'Tearful / emotional',
+              note: 'Cried quietly in the garden, saying she missed the lavender fields near her childhood home.',
+              aiPrompt: buildPrompt('Tearful / emotional', 'Madame Dubois')
+            },
+            {
+              id: 66,
+              timestamp: '2026-05-19 17:30',
+              resident: 'Mrs. O’Sullivan',
+              emotion: 'Warm connection',
+              note: 'Thanked Ana warmly for a wonderful week and said she felt truly seen and cared for.',
+              aiPrompt: buildPrompt('Warm connection', 'Mrs. O’Sullivan')
+            }
+          ]
+        };
+      },
+      computed: {
+        // [Perf] `trendSeries` was a method called from at least three
+        // places (`trendMilestones`, `trendSummary`, `renderCharts`) and
+        // every call rebuilt the same 7-day aggregation from scratch.
+        // Promoting it to a computed lets Vue cache the result and only
+        // recompute when its reactive deps (selectedTrendMoments / emotions
+        // / latestMomentDate via moments) actually change. All three call
+        // sites now read it as a property — see edits below.
+        trendSeries() {
+          const days = (() => {
+            const latest = this.latestMomentDate();
+            const start = new Date(latest);
+            start.setDate(start.getDate() - 6);
+            return Array.from({ length: 7 }, (_, index) => {
+              const date = new Date(start);
+              date.setDate(start.getDate() + index);
+              return date;
+            });
+          })();
+          return days.map(day => {
+            const key = this.dayKey(day);
+            const entries = this.selectedTrendMoments.filter(moment => this.dayKey(this.parseMomentDate(moment)) === key);
+            const emotionCounts = {};
+            this.emotions.forEach(e => { emotionCounts[e] = 0; });
+            entries.forEach(m => { emotionCounts[m.emotion]++; });
+
+            const toneTotal = entries.reduce((sum, moment) => sum + this.emotionTone(moment.emotion), 0);
+            const toneScore = entries.length ? Number((toneTotal / entries.length).toFixed(2)) : null;
+            const dominantEmotion = this.emotions
+              .map(emotion => ({ emotion, count: emotionCounts[emotion] }))
+              .sort((a, b) => b.count - a.count)[0]?.emotion || 'No dominant emotion';
+
+            return {
+              label: this.dayLabel(day),
+              total: entries.length,
+              emotionCounts,
+              toneScore,
+              dominantEmotion
+            };
+          });
+        },
+        filteredMoments() {
+          const from = this.historyDateFrom ? new Date(`${this.historyDateFrom}T00:00`) : null;
+          const to = this.historyDateTo ? new Date(`${this.historyDateTo}T23:59`) : null;
+
+          return this.moments
+            .filter(moment => this.historyFilter === 'All' || moment.resident === this.historyFilter)
+            .filter(moment => {
+              const momentDate = this.parseMomentDate(moment);
+              return (!from || momentDate >= from) && (!to || momentDate <= to);
+            })
+            .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+        },
+        historyEmptyTitle() {
+          return this.moments.length === 0 ? 'No moments recorded yet.' : 'No moments match this filter.';
+        },
+        historyEmptyMessage() {
+          return this.moments.length === 0
+            ? 'Your first reflection is just a click away.'
+            : 'Try changing the resident or date range.';
+        },
+        totalHistoryPages() {
+          return Math.ceil(this.filteredMoments.length / this.pageSize) || 1;
+        },
+        paginatedMoments() {
+          const start = (this.currentHistoryPage - 1) * this.pageSize;
+          return this.filteredMoments.slice(start, start + this.pageSize);
+        },
+        selectedTrendMoments() {
+          const source = this.selectedTrendResident === 'All residents'
+            ? this.moments
+            : this.moments.filter(moment => moment.resident === this.selectedTrendResident);
+          return [...source].sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+        },
+        selectedTrendProfile() {
+          if (this.selectedTrendResident === 'All residents') {
+            return {
+              initials: 'CW',
+              country: 'Whole home',
+              room: 'All households',
+              rhythm: 'Shared patterns across the week',
+              photo: 'assets/portraits/thumbs/all-residents-care-home.webp',
+              accent: '#6aa6a5',
+              hair: '#b8c9c2',
+              skin: '#eec8a5',
+              top: '#4f7f68'
+            };
+          }
+          return this.residentProfiles[this.selectedTrendResident] || this.residentProfiles[this.residents[0]];
+        },
+        // selectedTrendMoments is already sorted ascending — latest is the last item.
+        latestTrendMoment() {
+          const list = this.selectedTrendMoments;
+          return list.length ? list[list.length - 1] : null;
+        },
+        // [Perf #5] One pass over moments for the three Overview KPI cards.
+        momentToneStats() {
+          const POSITIVE = new Set(['Warm connection', 'Quietly settled']);
+          const SUPPORT = new Set(['Withdrawn / low', 'Agitated / restless', 'Tearful / emotional']);
+          let positive = 0;
+          let support = 0;
+          const byResident = Object.fromEntries(this.residents.map(r => [r, 0]));
+          for (const moment of this.moments) {
+            if (POSITIVE.has(moment.emotion)) positive += 1;
+            if (SUPPORT.has(moment.emotion)) support += 1;
+            if (byResident[moment.resident] !== undefined) {
+              byResident[moment.resident] += 1;
+            }
+          }
+          let mostActive = { resident: this.residents[0] || '', count: 0 };
+          for (const resident of this.residents) {
+            const count = byResident[resident] || 0;
+            if (count > mostActive.count) mostActive = { resident, count };
+          }
+          return { positive, support, mostActive };
+        },
+        positiveCount() {
+          return this.momentToneStats.positive;
+        },
+        supportCount() {
+          return this.momentToneStats.support;
+        },
+        mostActiveResident() {
+          return this.momentToneStats.mostActive;
+        },
+        weekRangeLabel() {
+          const end = this.latestMomentDate();
+          const start = new Date(end);
+          start.setDate(start.getDate() - 6);
+          return `${this.dayLabel(start)} – ${this.dayLabel(end)}`;
+        },
+        overviewInsight() {
+          const recent = this.lastNDaysMoments(7);
+          const scope = this.selectedTrendResident === 'All residents'
+            ? recent
+            : recent.filter(moment => moment.resident === this.selectedTrendResident);
+
+          if (this.selectedTrendResident !== 'All residents') {
+            const emotions = scope.map(m => m.emotion);
+            const warmCount = emotions.filter(e => e === 'Warm connection' || e === 'Quietly settled').length;
+            const lowCount = emotions.filter(e => e === 'Withdrawn / low').length;
+            const agitatedCount = emotions.filter(e => e === 'Agitated / restless').length;
+            const tearfulCount = emotions.filter(e => e === 'Tearful / emotional').length;
+
+            if (lowCount >= 2) {
+              return `${this.selectedTrendResident} has had several low moments this week. You might want to mention it at handover.`;
+            }
+            if (agitatedCount >= 2) {
+              return `${this.selectedTrendResident} has appeared restless more than usual. Could a familiar object or routine help them settle?`;
+            }
+            if (tearfulCount >= 2) {
+              return `${this.selectedTrendResident} has been tearful recently. Has anything changed in their environment or routine?`;
+            }
+            if (warmCount >= 2) {
+              return `${this.selectedTrendResident} has shown warmth and settled moments this week. These small connections are worth celebrating.`;
+            }
+            if (scope.length === 0) {
+              return `No recent moments recorded for ${this.selectedTrendResident}. Capturing a note or two this week may reveal helpful patterns.`;
+            }
+            return `${this.selectedTrendResident}'s emotional tone looks balanced this week. Keep noticing the small things.`;
+          }
+
+          const lowResident = this.residents.find(resident => {
+            return recent.filter(moment => moment.resident === resident && moment.emotion === 'Withdrawn / low').length >= 3;
+          });
+          if (lowResident) {
+            return `${lowResident} has had several low moments this week. You might want to mention it at handover.`;
+          }
+
+          const agitationCount = this.moments.filter(moment => moment.emotion === 'Agitated / restless').length;
+          if (this.moments.length && agitationCount / this.moments.length > 0.3) {
+            return 'Agitation has been more frequent this week. Could something in the care-home rhythm have changed?';
+          }
+
+          return 'Moments of warmth and quiet connection are still the most common patterns you’ve recorded. That’s something to hold on to.';
+        },
+        historyResidentInsight() {
+          if (this.historyFilter === 'All') return '';
+
+          const records = this.moments.filter(moment => moment.resident === this.historyFilter);
+          const recent = this.lastNDaysMoments(5).filter(moment => moment.resident === this.historyFilter);
+          const tearfulCount = recent.filter(moment => moment.emotion === 'Tearful / emotional').length;
+          if (tearfulCount >= 2) {
+            return `${this.historyFilter} has been tearful more than once this week. Has anything in their routine or environment changed recently?`;
+          }
+
+          const emotionCounts = this.emotions.map(emotion => ({
+            emotion,
+            count: records.filter(moment => moment.emotion === emotion).length
+          })).sort((a, b) => b.count - a.count);
+          if (emotionCounts[0] && emotionCounts[0].emotion === 'Withdrawn / low' && emotionCounts[0].count > 0) {
+            return `${this.historyFilter} seems to be spending a lot of time withdrawn. Would a one-to-one activity be possible this week?`;
+          }
+
+          const hasWarm = records.some(moment => moment.emotion === 'Warm connection');
+          const hasAgitated = records.some(moment => moment.emotion === 'Agitated / restless');
+          if (hasWarm && hasAgitated) {
+            return `${this.historyFilter} shows both moments of warmth and restlessness. This might be an important pattern to share with the care team.`;
+          }
+
+          return `${this.historyFilter}'s recent moments appear balanced. Keep noticing the small things.`;
+        },
+        contextMapMoments() {
+          return this.selectedTrendResident === 'All residents'
+            ? this.lastNDaysMoments(7)
+            : this.lastNDaysMoments(7).filter(moment => moment.resident === this.selectedTrendResident);
+        },
+        contextMapScope() {
+          return this.selectedTrendResident === 'All residents' ? 'Whole home · last 7 days' : `${this.selectedTrendResident} · last 7 days`;
+        },
+        // [Perf #5] Single pass: bucket each moment once, then emit rows.
+        contextEmotionMap() {
+          const labels = [
+            ...this.contextRules.map(rule => rule.label),
+            'Morning rhythm',
+            'Afternoon rhythm',
+            'Evening rhythm'
+          ];
+          const rows = Object.fromEntries(labels.map(label => [
+            label,
+            {
+              label,
+              total: 0,
+              counts: Object.fromEntries(this.emotions.map(e => [e, 0]))
+            }
+          ]));
+
+          for (const moment of this.contextMapMoments) {
+            const label = this.contextForMoment(moment);
+            const row = rows[label];
+            if (!row) continue;
+            row.total += 1;
+            if (row.counts[moment.emotion] !== undefined) {
+              row.counts[moment.emotion] += 1;
+            }
+          }
+
+          return labels
+            .map(label => {
+              const row = rows[label];
+              return {
+                label,
+                total: row.total,
+                cells: this.emotions.map(emotion => ({
+                  emotion,
+                  count: row.counts[emotion]
+                }))
+              };
+            })
+            .filter(row => row.total > 0);
+        },
+        contextMapMaxCount() {
+          return Math.max(1, ...this.contextEmotionMap.flatMap(row => row.cells.map(cell => cell.count)));
+        },
+        contextGuardrail() {
+          const cells = this.contextEmotionMap.flatMap(row => row.cells.map(cell => ({ ...cell, context: row.label })));
+          const strongest = cells.sort((a, b) => b.count - a.count)[0];
+          if (!strongest || strongest.count === 0) {
+            return 'These patterns are conversation starters, not conclusions. They can support handover reflection, but should always be read alongside staff knowledge, resident preferences, and the care environment.';
+          }
+
+          const phrase = strongest.emotion === 'Agitated / restless'
+            ? `Restless moments appear more often around ${strongest.context.toLowerCase()}`
+            : `${strongest.emotion.toLowerCase()} moments appear more often around ${strongest.context.toLowerCase()}`;
+
+          return `${phrase}. This may be useful for shift discussion, but it should not be read as a fixed trait of any resident. Context, environment, and staff knowledge still matter.`;
+        },
+        // [Perf #5] Group emotions per resident in one pass (no N×filter).
+        gentleHighlights() {
+          const hard = new Set(['Withdrawn / low', 'Agitated / restless']);
+          const byResident = Object.fromEntries(this.residents.map(r => [r, []]));
+          for (const moment of this.moments) {
+            if (byResident[moment.resident]) {
+              byResident[moment.resident].push(moment.emotion);
+            }
+          }
+          return this.residents
+            .map(resident => {
+              const entries = byResident[resident];
+              if (entries.length >= 2 && entries.every(emotion => hard.has(emotion))) {
+                const tone = entries.some(emotion => emotion === 'Withdrawn / low') ? 'low moments' : 'unsettled moments';
+                return `${resident} has had several ${tone} this week. You might want to mention it at handover.`;
+              }
+              return '';
+            })
+            .filter(Boolean);
+        },
+        trendLegend() {
+          return [
+            { label: 'Overall tone', color: '#4f7f68' },
+            ...this.emotions.map(emotion => ({
+              label: emotion,
+              color: this.emotionVisual(emotion).mid,
+              opacity: 0.55
+            }))
+          ];
+        },
+        // [Perf #5] One scan for highest / lowest / most-observed (no 3× sort+clone).
+        trendMilestones() {
+          const trend = this.trendSeries.filter(point => point.total > 0 && point.toneScore !== null);
+          if (!trend.length) return [];
+
+          let highest = trend[0];
+          let lowest = trend[0];
+          let mostObserved = trend[0];
+          for (let i = 1; i < trend.length; i++) {
+            const point = trend[i];
+            if (point.toneScore > highest.toneScore) highest = point;
+            if (point.toneScore < lowest.toneScore) lowest = point;
+            if (point.total > mostObserved.total) mostObserved = point;
+          }
+          const items = [];
+
+          items.push({
+            label: 'Gentlest lift',
+            text: `${highest.label} leans toward ${highest.dominantEmotion.toLowerCase()}. What helped make those moments possible?`
+          });
+
+          if (lowest.label !== highest.label) {
+            items.push({
+              label: 'Needs context',
+              text: `${lowest.label} sits lower on the tone line. What changed in routine, place, or staffing that day?`
+            });
+          }
+
+          if (!items.some(item => item.text.includes(mostObserved.label))) {
+            items.push({
+              label: 'Most observed',
+              text: `${mostObserved.label} has ${mostObserved.total} recorded moment${mostObserved.total === 1 ? '' : 's'} — enough to discuss gently at handover.`
+            });
+          }
+
+          return items.slice(0, 3);
+        },
+        trendSummary() {
+          const trend = this.trendSeries;
+          const totalRecords = trend.reduce((sum, p) => sum + p.total, 0);
+          const scope = this.selectedTrendResident === 'All residents' ? 'the home' : this.selectedTrendResident;
+
+          if (totalRecords === 0) return `No moments recorded for ${scope} this week.`;
+
+          const warmCount = trend.reduce((sum, p) => sum + (p.emotionCounts['Warm connection'] || 0), 0);
+          const lowCount = trend.reduce((sum, p) => sum + (p.emotionCounts['Withdrawn / low'] || 0), 0);
+          const agitatedCount = trend.reduce((sum, p) => sum + (p.emotionCounts['Agitated / restless'] || 0), 0);
+          const tearfulCount = trend.reduce((sum, p) => sum + (p.emotionCounts['Tearful / emotional'] || 0), 0);
+          const settledCount = trend.reduce((sum, p) => sum + (p.emotionCounts['Quietly settled'] || 0), 0);
+
+          const positive = warmCount + settledCount;
+          const negative = lowCount + agitatedCount + tearfulCount;
+          const scoredDays = trend.filter(point => point.toneScore !== null);
+          const firstTone = scoredDays[0]?.toneScore;
+          const lastTone = scoredDays[scoredDays.length - 1]?.toneScore;
+
+          if (scoredDays.length >= 2 && lastTone - firstTone >= 0.45) {
+            return `The tone line for ${scope} lifts across the week. Use the rise as a prompt to ask what conditions supported warmer or steadier moments.`;
+          }
+          if (scoredDays.length >= 2 && firstTone - lastTone >= 0.45) {
+            return `The tone line for ${scope} becomes heavier across the week. This is not a verdict, but it may be worth discussing context at handover.`;
+          }
+
+          if (negative > positive * 1.5) {
+            return `This week skews towards difficult moments for ${scope} — consider raising at handover.`;
+          }
+          if (lowCount >= 3) {
+            return `Several withdrawn/low moments for ${scope} this week. A one-to-one activity might help.`;
+          }
+          if (agitatedCount >= 3) {
+            return `Restlessness has been frequent for ${scope}. Worth checking if any routine changes have occurred.`;
+          }
+          if (positive > negative * 2) {
+            return `Warm and settled moments are dominant for ${scope} this week. A positive pattern worth noting.`;
+          }
+
+          const avgCount = totalRecords / 7;
+          const attentionNote = avgCount < 1 ? ' Recording frequency is low — consider increasing touchpoints.' : '';
+
+          return `${scope === 'the home' ? 'The home' : scope} shows a balanced mix of emotions this week.${attentionNote}`;
+        },
+        // [Perf] polarBins was a method re-run from renderPolarClock + three
+        // circadianPeriodSummary() template calls (4× per Overview paint).
+        // As a computed it caches until selectedTrendMoments / emotions change.
+        polarBins() {
+          const BINS = 48; // 30-minute bins
+          const bins = Array.from({ length: BINS }, (_, i) => ({
+            index: i,
+            startMinutes: i * (1440 / BINS),
+            counts: Object.fromEntries(this.emotions.map(e => [e, 0])),
+            total: 0,
+            tone: 0
+          }));
+          const moments = this.selectedTrendMoments;
+          moments.forEach(m => {
+            const d = this.parseMomentDate(m);
+            const minutes = d.getHours() * 60 + d.getMinutes();
+            const idx = Math.min(BINS - 1, Math.floor(minutes / (1440 / BINS)));
+            bins[idx].counts[m.emotion] += 1;
+            bins[idx].total += 1;
+            bins[idx].tone += this.emotionTone(m.emotion);
+          });
+          bins.forEach(b => {
+            if (b.total) b.tone = b.tone / b.total;
+            b.dominant = this.emotions
+              .map(e => ({ e, c: b.counts[e] }))
+              .sort((a, b2) => b2.c - a.c)[0];
+          });
+          return bins;
+        },
+        // [Perf] One pass over polarBins for all three period cards.
+        circadianPeriodSummaries() {
+          const bins = this.polarBins;
+          const make = (period, start, end) => {
+            const slice = bins.filter(b => {
+              const h = b.startMinutes / 60;
+              return h >= start && h < end;
+            });
+            const total = slice.reduce((s, b) => s + b.total, 0);
+            if (!total) return 'No moments captured in this window yet.';
+            const tally = Object.fromEntries(this.emotions.map(e => [e, 0]));
+            slice.forEach(b => this.emotions.forEach(e => { tally[e] += b.counts[e]; }));
+            const sorted = this.emotions.map(e => ({ e, c: tally[e] })).sort((a, b) => b.c - a.c);
+            const top = sorted[0];
+            if (!top || !top.c) return 'No moments captured in this window yet.';
+            const share = Math.round((top.c / total) * 100);
+            if (period === 'sundown' && (top.e === 'Agitated / restless' || top.e === 'Tearful / emotional')) {
+              return `${top.c}/${total} moments lean ${top.e.toLowerCase()} (${share}%) — worth checking against the sundowning literature.`;
+            }
+            return `${top.e} dominates (${top.c}/${total}, ${share}%).`;
+          };
+          return {
+            morning: make('morning', 6, 12),
+            sundown: make('sundown', 15, 19),
+            evening: make('evening', 19, 24)
+          };
+        }
+      },
+      watch: {
+        // [Perf] Removed `deep: true` — moments are only ever appended via
+        // saveMoment() (never mutated in place), so a shallow watch on the
+        // array reference / length is enough and avoids a deep diff on every
+        // Vue patch cycle.
+        // [Perf #6] If Overview is hidden, only mark dirty — re-render when
+        // the user comes back (avoids painting into display:none / 0-width).
+        moments() {
+          this.chartsDirty = true;
+          if (this.activeTab === 'Overview') {
+            this.scheduleChartRender();
+          }
+        },
+        selectedTrendResident() {
+          this.chartsDirty = true;
+          if (this.activeTab === 'Overview') {
+            this.scheduleChartRender();
+          }
+        },
+        historyFilter() {
+          this.resetHistoryPage();
+        },
+        historyDateFrom() {
+          this.resetHistoryPage();
+        },
+        historyDateTo() {
+          this.resetHistoryPage();
+        },
+        filteredMoments() {
+          if (this.currentHistoryPage > this.totalHistoryPages) {
+            this.currentHistoryPage = this.totalHistoryPages;
+          }
+        }
+      },
+      mounted() {
+        // Bound once so removeEventListener matches the same reference.
+        this._onWindowResize = () => this.scheduleChartResize();
+        window.addEventListener('resize', this._onWindowResize);
+        if (this.activeTab === 'Overview') {
+          this.scheduleChartRender();
+        }
+      },
+      beforeUnmount() {
+        if (this._onWindowResize) {
+          window.removeEventListener('resize', this._onWindowResize);
+        }
+        if (this.chartResizeTimer) {
+          clearTimeout(this.chartResizeTimer);
+          this.chartResizeTimer = null;
+        }
+        if (this.saveSuccessTimer) {
+          clearTimeout(this.saveSuccessTimer);
+          this.saveSuccessTimer = null;
+        }
+        this.destroyCharts();
+      },
+      methods: {
+        setTab(tab) {
+          this.activeTab = tab;
+          // Each tab is a full page of content — start the reader at its top.
+          const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+          // [Perf #6] Keep chart instances alive across tabs (v-show). Only
+          // refresh data if dirty; otherwise just resize after becoming visible.
+          if (tab === 'Overview') {
+            this.$nextTick(() => {
+              if (this.chartsDirty || !this.emotionChart || !this.trendChart) {
+                this.scheduleChartRender();
+              } else {
+                this.resizeCharts();
+              }
+            });
+          }
+        },
+        scheduleChartRender() {
+          const requestId = ++this.chartRenderRequestId;
+          if (this.chartRenderFrame) {
+            cancelAnimationFrame(this.chartRenderFrame);
+            this.chartRenderFrame = null;
+          }
+          this.$nextTick(() => {
+            if (requestId !== this.chartRenderRequestId || this.activeTab !== 'Overview') return;
+            this.chartRenderFrame = requestAnimationFrame(() => {
+              if (requestId !== this.chartRenderRequestId || this.activeTab !== 'Overview') return;
+              this.chartRenderFrame = null;
+              this.renderCharts();
+              this.chartsDirty = false;
+            });
+          });
+        },
+        selectEmotion(emotion) {
+          this.form.emotion = emotion;
+          if (this.suggestedEmotion === emotion) {
+            this.suggestedEmotion = '';
+            this.suggestionMessage = '';
+          }
+        },
+        resetHistoryPage() {
+          this.currentHistoryPage = 1;
+        },
+        suggestEmotion() {
+          const note = this.form.note.toLowerCase();
+          this.suggestedEmotion = '';
+          if (!note.trim()) {
+            this.suggestionMessage = 'Add a few words first, or choose manually.';
+            return;
+          }
+
+          const match = this.smartTagRules.find(rule => rule.keywords.some(keyword => note.includes(keyword)));
+          if (!match) {
+            this.suggestionMessage = 'No strong clue – please choose manually.';
+            return;
+          }
+
+          this.suggestedEmotion = match.emotion;
+          this.suggestionMessage = `Suggested: ${this.emotionEmoji[match.emotion]} ${match.emotion}`;
+        },
+        saveMoment() {
+          this.formError = '';
+          if (!this.form.resident || !this.form.emotion) {
+            this.formError = 'Please choose a resident and select one emotion tag.';
+            return;
+          }
+
+          const moment = {
+            id: Date.now(),
+            timestamp: this.formatTimestamp(new Date()),
+            resident: this.form.resident,
+            emotion: this.form.emotion,
+            note: this.form.note || '',
+            aiPrompt: this.buildPrompt(this.form.emotion, this.form.resident)
+          };
+
+          this.moments.push(moment);
+          this.latestReflection = null;
+          this.feedbackMessage = '';
+          this.suggestedEmotion = '';
+          this.suggestionMessage = '';
+          this.isReflecting = true;
+          this.form = { resident: '', emotion: '', note: '' };
+          this.showSaveSuccess(moment);
+
+          setTimeout(() => {
+            this.latestReflection = moment;
+            this.isReflecting = false;
+          }, 1200);
+        },
+        showSaveSuccess(moment) {
+          if (this.saveSuccessTimer) {
+            clearTimeout(this.saveSuccessTimer);
+            this.saveSuccessTimer = null;
+          }
+          this.saveSuccess = true;
+          this.saveSuccessTimer = setTimeout(() => {
+            this.saveSuccess = null;
+            this.saveSuccessTimer = null;
+          }, 3800);
+        },
+        giveFeedback() {
+          this.feedbackMessage = 'Thanks for helping us improve';
+          setTimeout(() => {
+            this.feedbackMessage = '';
+          }, 2400);
+        },
+        profileFor(resident) {
+          return this.residentProfiles[resident] || this.selectedTrendProfile;
+        },
+        buildPrompt(emotion, resident) {
+          const template = this.promptTemplates[emotion] || this.promptTemplates['Quietly settled'];
+          return template.replace('{Name}', resident);
+        },
+        contextForMoment(moment) {
+          const text = `${moment.note || ''} ${moment.aiPrompt || ''}`.toLowerCase();
+          const match = this.contextRules.find(rule => rule.keywords.some(keyword => text.includes(keyword)));
+          if (match) return match.label;
+
+          const hour = this.parseMomentDate(moment).getHours();
+          if (hour < 12) return 'Morning rhythm';
+          if (hour < 17) return 'Afternoon rhythm';
+          return 'Evening rhythm';
+        },
+        emotionVisual(emotion) {
+          return this.emotionVisuals[emotion] || this.emotionVisuals['Quietly settled'];
+        },
+        emotionIconStyle(emotion) {
+          const visual = this.emotionVisual(emotion);
+          return {
+            color: visual.iconColor,
+            backgroundColor: visual.light,
+            border: `1px solid ${visual.dark}33`
+          };
+        },
+        // CSS variables for the Record emotion picker chips.
+        emotionChipVars(emotion) {
+          const visual = this.emotionVisual(emotion);
+          return {
+            '--emo-bg': visual.light,
+            '--emo-mid': visual.mid,
+            '--emo-border': `${visual.dark}40`,
+            '--emo-border-strong': visual.dark,
+            '--emo-text': visual.iconColor,
+            '--emo-icon-fg': visual.iconColor
+          };
+        },
+        contextColor(emotion) {
+          return this.emotionVisual(emotion).dark;
+        },
+        hexToRgb(hex) {
+          const value = hex.replace('#', '');
+          return {
+            r: parseInt(value.slice(0, 2), 16),
+            g: parseInt(value.slice(2, 4), 16),
+            b: parseInt(value.slice(4, 6), 16)
+          };
+        },
+        contextCellStyle(emotion, count, maxCount) {
+          const rgb = this.hexToRgb(this.contextColor(emotion));
+          const strength = count ? 0.14 + (count / maxCount) * 0.46 : 0.04;
+          return {
+            backgroundColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${strength})`,
+            borderColor: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${count ? 0.34 : 0.12})`
+          };
+        },
+        formatTimestamp(date) {
+          const pad = value => String(value).padStart(2, '0');
+          return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+        },
+        parseMomentDate(moment) {
+          return new Date(moment.timestamp.replace(' ', 'T'));
+        },
+        latestMomentDate() {
+          // [Perf] Was: `[...this.moments].sort(...).` – O(n log n) and a full
+          // array clone every call. This method is hit indirectly from
+          // `lastNDaysMoments` / `trendDays` / `polarBins`, so it ran many
+          // times per render. A single reduce pass (O(n), no clone) gives the
+          // same result. Falls back to `new Date()` when there are no moments.
+          if (!this.moments.length) return new Date();
+          let latestStamp = this.moments[0].timestamp;
+          for (let i = 1; i < this.moments.length; i++) {
+            const stamp = this.moments[i].timestamp;
+            if (stamp > latestStamp) latestStamp = stamp;
+          }
+          return new Date(latestStamp.replace(' ', 'T'));
+        },
+        lastNDaysMoments(days) {
+          const latest = this.latestMomentDate();
+          const start = new Date(latest);
+          start.setDate(start.getDate() - (days - 1));
+          start.setHours(0, 0, 0, 0);
+          return this.moments.filter(moment => this.parseMomentDate(moment) >= start);
+        },
+        dayKey(date) {
+          const pad = value => String(value).padStart(2, '0');
+          return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+        },
+        dayLabel(date) {
+          return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        },
+        trendDays() {
+          const latest = this.latestMomentDate();
+          const start = new Date(latest);
+          start.setDate(start.getDate() - 6);
+          return Array.from({ length: 7 }, (_, index) => {
+            const date = new Date(start);
+            date.setDate(start.getDate() + index);
+            return date;
+          });
+        },
+        emotionTone(emotion) {
+          return this.emotionVisual(emotion).score || 0;
+        },
+        // [Perf] `trendSeries` has been promoted to a computed (see above)
+        // so Vue can cache it across multiple call sites. Method removed.
+        countsByEmotion() {
+          return this.emotions.map(emotion => this.moments.filter(moment => moment.emotion === emotion).length);
+        },
+        countsByResident() {
+          return this.residents.map(resident => this.moments.filter(moment => moment.resident === resident).length);
+        },
+
+        // ============================================================
+        //  24-HOUR POLAR CLOCK (Circadian View) — D3
+        // ------------------------------------------------------------
+        //  Data contract: any timestamped event with an emotion tag works.
+        //  Real research data sources that fit this view: actigraphy bins,
+        //  HRV summaries, BPSD episode logs (Cohen-Mansfield Agitation
+        //  Inventory entries with timestamps), nurse-shift observations.
+        //  Bin granularity is fixed at 30 min (48 bins) — see computed
+        //  `polarBins`. Petal grow animation runs only on first paint.
+        // ============================================================
+        renderPolarClock(options = {}) {
+          if (!window.d3 || !this.$refs.polarChart) return;
+          const animate = options.animate === true || (!this.polarRendered && options.animate !== false);
+          const svgEl = this.$refs.polarChart;
+          const wrap = svgEl.parentElement;
+          const width = wrap.clientWidth || 520;
+          const height = wrap.clientHeight || 440;
+          const cx = width / 2;
+          const cy = height / 2;
+          const outerR = Math.min(width, height) / 2 - 24;
+          const innerR = outerR * 0.32;
+
+          // Interrupt any in-flight petal transitions before wiping the SVG
+          // (avoids callbacks writing into a detached selection on resize).
+          const svg = d3.select(svgEl);
+          svg.selectAll('*').interrupt();
+          svg.selectAll('*').remove();
+          svg.attr('viewBox', `0 0 ${width} ${height}`);
+
+          const bins = this.polarBins;
+          const maxCount = Math.max(1, d3.max(bins, b => b.total) || 1);
+
+          // Period bands (morning / afternoon / sundown / evening)
+          const periods = [
+            { label: 'Morning', start: 6, end: 12, tone: '#dcebe2' },
+            { label: 'Afternoon', start: 12, end: 15, tone: '#eef3f2' },
+            { label: 'Sundown', start: 15, end: 19, tone: '#f1d2c4' },
+            { label: 'Evening', start: 19, end: 24, tone: '#e4e7f4' },
+            { label: 'Night', start: 0, end: 6, tone: '#dceaf3' }
+          ];
+          const angle = h => (h / 24) * Math.PI * 2 - Math.PI / 2; // 0h on top
+          const arc = d3.arc().innerRadius(innerR).outerRadius(outerR + 4);
+          const bandG = svg.append('g').attr('transform', `translate(${cx},${cy})`).attr('class', 'polar-bands-bg');
+          periods.forEach(p => {
+            bandG.append('path').attr('d', arc({
+              startAngle: angle(p.start) + Math.PI / 2,
+              endAngle: angle(p.end) + Math.PI / 2
+            })).attr('fill', p.tone).attr('opacity', 0.35);
+          });
+
+          // Concentric reference rings
+          const ringG = svg.append('g').attr('class', 'polar-bands').attr('transform', `translate(${cx},${cy})`);
+          [0.33, 0.66, 1].forEach(t => {
+            ringG.append('circle').attr('r', innerR + (outerR - innerR) * t).attr('fill', 'none').attr('stroke', 'rgba(143,181,161,0.18)');
+          });
+
+          // Hour ticks
+          const tickG = svg.append('g').attr('transform', `translate(${cx},${cy})`);
+          for (let h = 0; h < 24; h++) {
+            const a = angle(h);
+            const major = h % 6 === 0;
+            const tg = tickG.append('g').attr('class', `polar-tick ${major ? 'major' : ''}`);
+            const x1 = Math.cos(a) * (outerR + 4);
+            const y1 = Math.sin(a) * (outerR + 4);
+            const x2 = Math.cos(a) * (outerR + (major ? 14 : 8));
+            const y2 = Math.sin(a) * (outerR + (major ? 14 : 8));
+            tg.append('line').attr('x1', x1).attr('y1', y1).attr('x2', x2).attr('y2', y2);
+            if (major || h % 3 === 0) {
+              const lx = Math.cos(a) * (outerR + 26);
+              const ly = Math.sin(a) * (outerR + 26) + 3;
+              tg.append('text').attr('x', lx).attr('y', ly).attr('text-anchor', 'middle').text(`${h.toString().padStart(2, '0')}:00`);
+            }
+          }
+
+          // Petals (segments) — radial length ∝ √(count) of dominant emotion in that bin
+          const segG = svg.append('g').attr('transform', `translate(${cx},${cy})`).attr('class', 'polar-segments');
+          const tip = this.$refs.polarTooltip ? d3.select(this.$refs.polarTooltip) : null;
+          const segArc = d3.arc().innerRadius(innerR).cornerRadius(4);
+          bins.forEach(b => {
+            if (!b.total) return;
+            const startA = (b.startMinutes / 1440) * Math.PI * 2;
+            const endA = ((b.startMinutes + 1440 / 48) / 1440) * Math.PI * 2;
+            const radial = innerR + (outerR - innerR) * Math.sqrt(b.total / maxCount);
+            const v = this.emotionVisual(b.dominant.e);
+            const path = segG.append('path')
+              .attr('class', 'polar-segment')
+              .attr('d', segArc({ startAngle: startA, endAngle: endA, innerRadius: innerR, outerRadius: innerR }))
+              .attr('fill', v.mid)
+              .attr('stroke', v.dark)
+              .attr('stroke-width', 0.6)
+              .attr('opacity', 0.85)
+              .on('mouseenter', (event) => {
+                if (!tip) return;
+                const rect = wrap.getBoundingClientRect();
+                const hh = Math.floor(b.startMinutes / 60).toString().padStart(2, '0');
+                const mm = (b.startMinutes % 60).toString().padStart(2, '0');
+                const breakdown = this.emotions
+                  .filter(e => b.counts[e])
+                  .map(e => `${e}: ${b.counts[e]}`)
+                  .join('<br/>');
+                tip.classed('is-visible', true)
+                  .style('left', (event.clientX - rect.left) + 'px')
+                  .style('top', (event.clientY - rect.top) + 'px')
+                  .html(`<strong>${hh}:${mm}</strong> · ${b.total} moment${b.total === 1 ? '' : 's'}<br/>${breakdown}`);
+              })
+              .on('mousemove', (event) => {
+                if (!tip) return;
+                const rect = wrap.getBoundingClientRect();
+                tip.style('left', (event.clientX - rect.left) + 'px')
+                   .style('top', (event.clientY - rect.top) + 'px');
+              })
+              .on('mouseleave', () => { if (tip) tip.classed('is-visible', false); });
+            // [Perf] Grow animation only on first paint — resize / data refresh
+            // snap to final geometry so dragging the window stays smooth.
+            if (animate) {
+              path.transition().duration(700).delay(b.index * 12).ease(d3.easeCubicOut)
+                .attrTween('d', () => {
+                  const interp = d3.interpolate(innerR, radial);
+                  return t => segArc({ startAngle: startA, endAngle: endA, innerRadius: innerR, outerRadius: interp(t) });
+                });
+            } else {
+              path.attr('d', segArc({ startAngle: startA, endAngle: endA, innerRadius: innerR, outerRadius: radial }));
+            }
+          });
+
+          // Center label
+          const cg = svg.append('g').attr('class', 'polar-center').attr('transform', `translate(${cx},${cy})`);
+          // 中心仅保留一个柔和的时刻识别点（轻量、不抢戏）
+          cg.append('circle').attr('r', 4).attr('fill', 'rgba(79,127,104,0.85)');
+          cg.append('circle').attr('r', 9).attr('fill', 'none').attr('stroke', 'rgba(79,127,104,0.25)').attr('stroke-width', 1);
+
+          this.polarRendered = true;
+        },
+
+        // Build Chart.js datasets for the 7-day tone tracker (shared by create + update).
+        buildTrendChartPayload() {
+          const trend = this.trendSeries;
+          const emotionColorMap = Object.fromEntries(
+            this.emotions.map(emotion => [emotion, this.emotionVisual(emotion).mid])
+          );
+          const emotionLineDatasets = this.emotions.map(emotion => ({
+            label: emotion,
+            data: trend.map(point => point.total ? Number(((point.emotionCounts[emotion] / point.total) * this.emotionTone(emotion)).toFixed(2)) : null),
+            borderColor: emotionColorMap[emotion],
+            backgroundColor: emotionColorMap[emotion],
+            borderWidth: 1.6,
+            borderDash: [4, 4],
+            pointRadius: 0,
+            pointHitRadius: 12,
+            tension: 0.36,
+            spanGaps: true,
+            order: 2
+          }));
+          return {
+            trend,
+            labels: trend.map(point => point.label),
+            datasets: [
+              ...emotionLineDatasets,
+              {
+                label: 'Overall tone',
+                data: trend.map(point => point.toneScore),
+                borderColor: '#4f7f68',
+                backgroundColor: 'rgba(143, 181, 161, 0.18)',
+                borderWidth: 3,
+                fill: true,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: '#ffffff',
+                pointBorderColor: '#4f7f68',
+                pointBorderWidth: 2,
+                tension: 0.36,
+                spanGaps: true,
+                order: 1
+              }
+            ]
+          };
+        },
+        // Chart.js tooltip callbacks close over a stable `getTrend` so update()
+        // does not need to rebuild the whole chart instance.
+        trendTooltipCallbacks(getTrend) {
+          return {
+            title: (items) => {
+              const point = getTrend()[items[0].dataIndex];
+              return `${point.label} · ${point.total} moment${point.total === 1 ? '' : 's'}`;
+            },
+            label: (ctx) => {
+              const point = getTrend()[ctx.dataIndex];
+              if (point.toneScore === null) return 'No moments recorded';
+              return `Overall tone: ${point.toneScore > 0 ? '+' : ''}${point.toneScore}`;
+            },
+            afterLabel: (ctx) => {
+              const point = getTrend()[ctx.dataIndex];
+              if (!point.total) return 'A quiet gap in the record';
+              return `Most visible: ${point.dominantEmotion}`;
+            },
+            footer: (items) => {
+              const point = getTrend()[items[0].dataIndex];
+              if (!point.total) return 'No verdict — just a space to notice.';
+              const counts = this.emotions
+                .filter(emotion => point.emotionCounts[emotion] > 0)
+                .map(emotion => `${emotion}: ${point.emotionCounts[emotion]}`);
+              return counts.join(' · ');
+            }
+          };
+        },
+        renderCharts() {
+          if (typeof Chart === 'undefined' || !this.$refs.emotionChart || !this.$refs.trendChart) {
+            return;
+          }
+
+          const chartText = '#263532';
+          Chart.defaults.font.family = 'Inter, ui-sans-serif, system-ui, Segoe UI, Arial, sans-serif';
+          Chart.defaults.color = chartText;
+
+          const emotionData = this.countsByEmotion();
+          const emotionColors = this.emotions.map(emotion => this.emotionVisual(emotion).mid);
+          const emotionCanvas = this.$refs.emotionChart;
+          const liveEmotion = typeof Chart.getChart === 'function' ? Chart.getChart(emotionCanvas) : null;
+
+          // [Perf] Prefer chart.update('none') over destroy + new Chart when the
+          // canvas instance is still the one we own (resident filter / new moment).
+          if (this.emotionChart && liveEmotion === this.emotionChart) {
+            this.emotionChart.data.labels = this.emotions;
+            this.emotionChart.data.datasets[0].data = emotionData;
+            this.emotionChart.data.datasets[0].backgroundColor = emotionColors;
+            this.emotionChart.update('none');
+          } else {
+            if (liveEmotion) {
+              try { liveEmotion.destroy(); } catch (e) { /* ignore */ }
+            }
+            this.emotionChart = new Chart(emotionCanvas, {
+              type: 'doughnut',
+              data: {
+                labels: this.emotions,
+                datasets: [{
+                  data: emotionData,
+                  backgroundColor: emotionColors,
+                  borderColor: '#ffffff',
+                  borderWidth: 4,
+                  hoverOffset: 8
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                cutout: '62%',
+                plugins: {
+                  legend: {
+                    position: 'bottom',
+                    labels: {
+                      boxWidth: 14,
+                      boxHeight: 14,
+                      padding: 18,
+                      usePointStyle: true
+                    }
+                  },
+                  tooltip: {
+                    backgroundColor: '#263532',
+                    padding: 12,
+                    cornerRadius: 12
+                  }
+                }
+              }
+            });
+          }
+
+          // ===== D3 24h Polar Clock (Circadian View) =====
+          // First paint animates petals; subsequent data refreshes snap.
+          this.renderPolarClock({ animate: !this.polarRendered });
+
+          const { trend, labels, datasets } = this.buildTrendChartPayload();
+          const trendCanvas = this.$refs.trendChart;
+          const liveTrend = typeof Chart.getChart === 'function' ? Chart.getChart(trendCanvas) : null;
+          const getTrend = () => this.trendSeries;
+
+          if (this.trendChart && liveTrend === this.trendChart) {
+            this.trendChart.data.labels = labels;
+            this.trendChart.data.datasets = datasets;
+            this.trendChart.update('none');
+          } else {
+            if (liveTrend) {
+              try { liveTrend.destroy(); } catch (e) { /* ignore */ }
+            }
+            this.trendChart = new Chart(trendCanvas, {
+              type: 'line',
+              data: { labels, datasets },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                interaction: {
+                  mode: 'index',
+                  intersect: false
+                },
+                scales: {
+                  y: {
+                    min: -1.5,
+                    max: 1.5,
+                    grid: {
+                      color: (ctx) => ctx.tick.value === 0 ? '#b8c9c2' : '#e4ecea',
+                      lineWidth: (ctx) => ctx.tick.value === 0 ? 1.5 : 1
+                    },
+                    ticks: {
+                      stepSize: 0.5,
+                      callback: value => {
+                        if (value === 1.5) return 'warmer';
+                        if (value === 0) return 'steady';
+                        if (value === -1.5) return 'heavier';
+                        return '';
+                      }
+                    },
+                    title: { display: true, text: 'Emotional tone' }
+                  },
+                  x: {
+                    grid: { display: false }
+                  }
+                },
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    backgroundColor: '#263532',
+                    padding: 12,
+                    cornerRadius: 12,
+                    filter: (ctx) => ctx.dataset.label === 'Overall tone',
+                    callbacks: this.trendTooltipCallbacks(getTrend)
+                  }
+                }
+              }
+            });
+          }
+        },
+        // [Perf] Coalesce rapid resize events (window drag) before touching
+        // Chart.js or rebuilding the D3 polar geometry.
+        scheduleChartResize() {
+          if (this.activeTab !== 'Overview') return;
+          if (this.chartResizeTimer) clearTimeout(this.chartResizeTimer);
+          this.chartResizeTimer = setTimeout(() => {
+            this.chartResizeTimer = null;
+            this.resizeCharts();
+          }, 160);
+        },
+        resizeCharts() {
+          if (this.activeTab !== 'Overview') return;
+          [this.emotionChart, this.trendChart].forEach(chart => {
+            try { if (chart) chart.resize(); } catch (e) { /* ignore */ }
+          });
+          // Polar clock is SVG — rebuild geometry without grow animation.
+          try { this.renderPolarClock({ animate: false }); } catch (e) { /* ignore */ }
+        },
+        destroyCharts() {
+          if (this.chartRenderFrame) {
+            cancelAnimationFrame(this.chartRenderFrame);
+            this.chartRenderFrame = null;
+          }
+          if (this.chartResizeTimer) {
+            clearTimeout(this.chartResizeTimer);
+            this.chartResizeTimer = null;
+          }
+          const charts = new Set([this.emotionChart, this.trendChart]);
+          if (typeof Chart !== 'undefined') {
+            [this.$refs.emotionChart, this.$refs.trendChart].forEach(canvas => {
+              const chart = canvas ? Chart.getChart(canvas) : null;
+              if (chart) charts.add(chart);
+            });
+          }
+          charts.forEach(chart => {
+            try { if (chart) chart.destroy(); } catch (e) { /* canvas already removed by Vue */ }
+          });
+          this.emotionChart = null;
+          this.trendChart = null;
+          // Clear any rendered polar clock so the next renderCharts() starts fresh.
+          if (window.d3 && this.$refs.polarChart) {
+            try {
+              d3.select(this.$refs.polarChart).selectAll('*').interrupt();
+              d3.select(this.$refs.polarChart).selectAll('*').remove();
+            } catch (e) { /* ignore */ }
+          }
+          this.polarRendered = false;
+        }
+      }
+    }).mount('#app');
+    });
+  </script>
+</body>
+</html>
